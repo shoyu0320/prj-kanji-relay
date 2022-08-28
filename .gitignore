@@ -1,0 +1,16 @@
+# 無視する！
+test.*
+data/*
+.*
+*.ipynb
+
+# 追跡する！
+!test.py
+!test.pdf
+!.gitignore
+
+# config
+!.editorconfig
+
+# cash
+*.pyc

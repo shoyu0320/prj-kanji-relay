@@ -1,0 +1,23 @@
+# ルートディレクトリを指定する。
+# ルートにある場合は true と書くだけで良い！
+root = true
+
+[*] # 基本の設定で、全てに適用される
+# インデントのスタイルはどうしまふ？？ ∈ [space, tab]
+indent_style = space
+# インデントのサイズはどうします？spaceの数！４がいいね
+indent_size = 4
+# タブ一個あたりのスペース数かな。インデントサイズで十分かも。
+tab_width = 4
+# 文末の改行方法 ∈ [lf, cr, crlf]
+end_of_line = lf
+# 文字コードさん ∈ [latin1, utf-8, utf-8-bom, utf-16be or utf-16le]
+charset = utf-8
+# 文末の空白は削除する？削除しましょう！さっき設定したし！
+trim_trailing_whitespace = true
+# 最終行の改行は必要？私は必要派！
+insert_final_newline = true
+
+# 特定のファイルに対して設定を変更したい場合、追加で以下のように書くこともできる。
+[*.json] # .jsonファイル全てに作用する設定
+indent_size = 2
