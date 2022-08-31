@@ -3,6 +3,7 @@ test.*
 data/*
 .*
 *.ipynb
+src/test_data.py
 
 # 追跡する！
 !test.py
