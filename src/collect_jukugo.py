@@ -15,39 +15,10 @@ if len(res) > 0:
 try:
     from data.data_collector import AbstractDataCollector, SimpleDataCollector
     from data.data_saver import SimpleDataSaver
+
+    from .data.extract_data import identity_fn, sieve_fn
 except ImportError:
     raise
-
-
-def sieve_fn(output: List[str]) -> List[str]:
-    """
-    > It returns `True` if the last part of the string is a number, and `False`
-    otherwise
-
-    Args:
-        output (List[str]): List[str] -> The output of the previous function.
-    """
-
-    def _is_valid_data(data: str):
-        """
-        > It returns `True` if the last part of the string is a number, and
-        `False` otherwise
-
-        Args:
-            data (str): The data to be validated.
-
-        Returns:
-            a boolean value.
-        """
-        return data.split("/")[-1].isdigit()
-
-    _out: List[str] = []
-
-    for out in output:
-        if _is_valid_data(out):
-            _out.append(out)
-
-    return _out
 
 
 def collect_data(inputs: Dict[str, str], saver: SimpleDataSaver, filename: str) -> None:
@@ -115,7 +86,7 @@ def main() -> None:
     url_base: Optional[str] = None
     kana_dir: Optional[str] = None
     num_pages: Optional[str] = None
-    saver.change_converter(fn=lambda out: out)
+    saver.change_converter(fn=identity_fn)
 
     for kana in hiragana:
         url_base, [kana_dir, num_pages] = get_page_info(kana)
