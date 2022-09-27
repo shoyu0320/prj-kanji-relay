@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import yaml
@@ -29,11 +29,17 @@ class Env:
 
 
 class JukugoRelayEnv(Env):
-    def __init__(self, jukugo_dict: List[str] = [], user_id: int = 0) -> None:
+    def __init__(
+        self,
+        jukugo_dict: List[str] = [],
+        user_id: int = 0,
+        user_name: Optional[str] = None,
+    ) -> None:
         super().__init__()
         self.jukugo_dict: List[str] = jukugo_dict
         self.used_jukugo: List[str] = []
         self.user_id: int = user_id
+        self.user_name: Optional[str] = user_name
 
     @property
     def dict_size(self) -> int:
