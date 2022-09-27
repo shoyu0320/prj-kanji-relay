@@ -177,7 +177,7 @@ def run():
                 word, _, _, done = player.step(word)
                 print(continue_temp.format(player.user_name, word["jukugo"], done))
                 if done:
-            break
+                    break
             epoch += 1
 
         # End Game
