@@ -70,9 +70,10 @@ class JukugoRelayEnv(Env):
             jukugo = None
         return jukugo
 
-    def reset(self, jukugo: Optional[str] = None):
+
+    def reset(self, jukugos: Optional[Union[str, List[str]]] = None) -> Dict[str, str]:
         self.used_jukugo = []
-        self.update_used_jukugo(jukugo)
+        self.update_used_jukugo(jukugos)
         jukugo = self._get_new_jukugo()
         return {"jukugo": jukugo}
 
@@ -92,9 +93,16 @@ class JukugoRelayEnv(Env):
 
         return new_obs, info, reward, done
 
-    def update_used_jukugo(self, jukugo: Optional[str] = None) -> None:
-        if jukugo is not None:
-            self.used_jukugo.append(jukugo["jukugo"])
+    def update_used_jukugo(
+        self, jukugos: Optional[Union[str, List[str]]] = None
+    ) -> None:
+        if isinstance(jukugos, str):
+            self.used_jukugo.append(jukugos)
+        elif isinstance(jukugos, dict):
+            self.used_jukugo.append(jukugos["jukugo"])
+        elif isinstance(jukugos, list):
+            for jukugo in jukugos:
+                self.update_used_jukugo(jukugo)
 
 
 def run():
