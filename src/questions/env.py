@@ -131,22 +131,65 @@ class JukugoRelayEnv(Env):
 def run():
     with open("../../data/niji-jukugo.yml") as f:
         data: List[str] = yaml.safe_load(f)
-    player1: Env = JukugoRelayEnv(jukugo_dict=data, user_id=0)
-    player2: Env = JukugoRelayEnv(jukugo_dict=data, user_id=1)
 
-    obs1 = player1.reset()
-    obs2 = player2.reset(obs1)
-    for epoch in range(100):
-        player1.update_used_jukugo(obs2)
-        obs1, info1, reward1, done1 = player1.step(obs2)
-        if done1:
+    # Set Variables
+    i: int
+    player: JukugoRelayEnv
+    word: Dict[str, str]
+    epoch: int
+    done: bool
+    _: Any
+
+    # Set Constant Values
+    num_players: int = 4
+    num_games: int = 20
+    players: Dict[str, JukugoRelayEnv] = {}
+    epoch_line: str = "=" * 50
+    game_line: str = "*" * 50
+    continue_temp: str = "{}: 熟語: {}, ゲーム終了判定: {}"
+    win_temp: str = "勝利: {}"
+    lose_temp: str = "敗北: {}"
+
+    # Create Players
+    for i in range(num_players):
+        players[i] = JukugoRelayEnv(
+            jukugo_dict=data, user_id=i % 2, user_name=f"プレイヤー{i}"
+        )
+
+    # Create and Run Games
+    for game in range(1, num_games + 1):
+        print(f"Game: {game}" + game_line)
+
+        # Initialize Constant
+        epoch = 1
+        done = False
+
+        # Reset Envs
+        for i in range(num_players):
+            word = players[i].reset()
+        print(continue_temp.format("ゲームマスター", word["jukugo"], False))
+
+        # Start Game
+        while not done:
+            print(f"Epoch: {epoch}" + epoch_line)
+            for i, player in players.items():
+                player.update_used_jukugo(word)
+                word, _, _, done = player.step(word)
+                print(continue_temp.format(player.user_name, word["jukugo"], done))
+                if done:
             break
-        player2.update_used_jukugo(obs1)
-        obs2, info2, reward2, done2 = player2.step(obs1)
-        if done2:
-            break
-        print(obs1["jukugo"], obs2["jukugo"], done1, done2)
-    print(epoch, obs1["jukugo"], obs2["jukugo"], done1, done2, reward1, reward2)
+            epoch += 1
+
+        # End Game
+        print(game_line)
+        winner: JukugoRelayEnv = players[(i - 1) % num_players]
+        loser: JukugoRelayEnv = player
+        if epoch + i > 2:
+            print(win_temp.format(winner.user_name))
+            print(lose_temp.format(loser.user_name))
+        else:
+            print(win_temp.format("ゲームマスター"))
+            print(lose_temp.format("プレイヤー"))
 
 
 if __name__ == "__main__":
