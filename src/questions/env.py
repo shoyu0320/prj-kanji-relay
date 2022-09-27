@@ -69,6 +69,22 @@ class JukugoRelayEnv(Env):
             jukugo = None
         return jukugo
 
+    def is_in_unused(self, jukugo: str) -> bool:
+        return jukugo in self.jukugo_dict
+
+    def _get_new_state(self, jukugo: str) -> Tuple[Dict[str, Any], float, bool]:
+        done: bool = False
+        reward: float = 0
+        if jukugo is None:
+            done = True
+            reward -= 1
+
+        judge: bool = self.is_in_unused(jukugo)
+        info: Dict[str, Any] = {"used_jukugo": self.used_jukugo, "is_in": judge}
+
+        if not judge:
+            reward -= 1
+        return info, reward, done
 
     def reset(self, jukugos: Optional[Union[str, List[str]]] = None) -> Dict[str, str]:
         self.used_jukugo = []
@@ -85,6 +101,12 @@ class JukugoRelayEnv(Env):
 
         new_obs: Dict[str, str] = {"jukugo": new_jukugo}
         self.update_used_jukugo(new_obs)
+
+        info: Dict[str, Any]
+        reward: float
+        done: bool
+
+        info, reward, done = self._get_new_state(new_jukugo)
 
         return new_obs, info, reward, done
 
