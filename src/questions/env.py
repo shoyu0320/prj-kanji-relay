@@ -45,7 +45,7 @@ class JukugoRelayEnv(Env):
     def dict_size(self) -> int:
         return len(self.jukugo_dict)
 
-    def _get_unused_jukugo(self):
+    def _get_unused_jukugo(self) -> np.ndarray:
         return np.setdiff1d(self.jukugo_dict, self.used_jukugo)
 
     def _get_partial_match_jukugo(
