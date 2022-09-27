@@ -65,7 +65,6 @@ class JukugoRelayEnv(Env):
         unused_jukugo: List[str] = self._get_available_jukugo(pre_jukugo)
         if len(unused_jukugo) > 0:
             jukugo = np.random.choice(unused_jukugo)
-            self.used_jukugo.append(jukugo)
         else:
             jukugo = None
         return jukugo
@@ -81,15 +80,11 @@ class JukugoRelayEnv(Env):
         self, obs: Dict[str, str]
     ) -> Tuple[Dict[str, str], Dict[str, Any], float, bool]:
         old_jukugo: Optional[str] = obs.get("jukugo")
+        self.update_used_jukugo(obs)
         new_jukugo: str = self._get_new_jukugo(old_jukugo)
 
         new_obs: Dict[str, str] = {"jukugo": new_jukugo}
-        done: bool = False
-        reward: float = 0
-        if new_jukugo is None:
-            done: bool = True
-            reward: float = -1
-        info: Dict[str, Any] = {"used_jukugo": self.used_jukugo}
+        self.update_used_jukugo(new_obs)
 
         return new_obs, info, reward, done
 
