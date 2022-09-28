@@ -102,17 +102,22 @@ class JukugoRelayEnv(Env):
             self.jukugo_box.increase_seq(jukugos)
         return self.state
 
-    def step(self, obs: Dict[str, str]) -> State:
+    def _step(self, obs: Dict[str, str]) -> State:
         # 受け取った熟語を使用済に
         old_jukugo: Optional[str] = obs.get("jukugo")
         self.jukugo_box.increase(old_jukugo)
 
         # 提出する熟語を使用済に
         new_jukugo: str = self._get_new_jukugo(old_jukugo)
+        self._set_new_state(new_jukugo)
+
+        return new_jukugo
+
+    def step(self, obs: Dict[str, str]) -> State:
+        new_jukugo: str = self._step(obs)
+
         if new_jukugo is not None:
             self.jukugo_box.increase(new_jukugo)
-
-        self._set_new_state(new_jukugo)
 
         return self.state
 
