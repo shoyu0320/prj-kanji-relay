@@ -41,6 +41,7 @@ class VariablesBox:
         return output
 
     def _check_id_list(self) -> None:
+        # unused list のサイズのみで簡易チェックする
         if len(self.used_ids) > self.max_ids:
             raise IndexError(
                 "Sequence size of self.used_ids has larger size"
@@ -49,14 +50,19 @@ class VariablesBox:
         if len(self.used_ids) != len(set(self.used_ids)):
             raise ValueError(
                 "Sequence self.used_ids mustn't"
-                "have two or more same ids, but; {self.used_ids}"
+                f"have two or more same ids, but; {self.used_ids}"
             )
 
     def is_still_unused(self, val: Union[int, str]) -> bool:
-        return val in self.unused_vars
+        if val in self.unused_vars:
+            return True
+        else:
+            print(f"辞書にない熟語です。; {val}")
+            return False
 
     def add2used(self, used_id: int) -> None:
         self.used_ids.append(used_id)
+        self._check_id_list()
 
     def push(self, val: Union[str, int]) -> None:
         self.variables += [val]
