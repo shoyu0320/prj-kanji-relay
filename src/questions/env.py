@@ -31,12 +31,16 @@ class Env:
 class JukugoRelayEnv(Env):
     def __init__(
         self,
-        jukugo_dict: List[str] = [],
+        jukugo_list: List[str] = [],
         user_id: int = 0,
         user_name: Optional[str] = None,
     ) -> None:
         super().__init__()
-        self.jukugo_box: VariablesBox = VariablesBox(jukugo_dict, box_id=user_name)
+        self.jukugo_box: VariablesBox
+        if isinstance(jukugo_list, VariablesBox):
+            self.jukugo_box = jukugo_list
+        else:
+            self.jukugo_box = VariablesBox(jukugo_list, box_id=user_name)
         self.user_id: int = user_id
         self.user_name: Optional[str] = user_name
 
