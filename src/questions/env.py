@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import yaml
 
+# TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
 src_dir, *res = os.getcwd().split("/src")
 
 if len(res) > 0:
@@ -11,22 +12,18 @@ if len(res) > 0:
 
     sys.path.append(src_dir + "/src")
 
+from questions.state import State
 from questions.variable_box import VariablesBox
 
 
 class Env:
     def __init__(self) -> None:
-        self.obs: Dict[str, str] = {}
-        self.info: Dict[str, Any] = {}
-        self.reward: float = 0.0
-        self.done: bool = False
+        self.state: State = State()
 
-    def reset(self) -> Dict[str, str]:
+    def reset(self) -> State:
         pass
 
-    def step(
-        self, obs: Dict[str, str]
-    ) -> Tuple[Dict[str, str], Dict[str, Any], float, bool]:
+    def step(self, obs: Dict[str, str]) -> State:
         raise NotImplementedError()
 
 
@@ -75,17 +72,17 @@ class JukugoRelayEnv(Env):
     def _set_new_state(self, jukugo: str) -> None:
         judge: bool = self.jukugo_box.is_still_unused(jukugo)
 
-    def _get_new_state(self, jukugo: str) -> Tuple[Dict[str, Any], float, bool]:
-        done: bool = False
-        reward: float = 0
-        if jukugo is None:
-            done = True
-            reward -= 1
+        # 観測更新
+        self.state.set_obs({"jukugo": jukugo})
 
-        judge: bool = self.is_in_unused(jukugo)
-        info: Dict[str, Any] = {"used_jukugo": self.used_jukugo, "is_in": judge}
+        # 終端、報酬更新
+        if jukugo is None:
+            self.state.set_done(True)
+            self.state.reward -= 1.0
 
         if not judge:
+            self.state.reward -= 1.0
+
         # 情報更新
         self.state.set_info(
             {"unused_jukugo": self.jukugo_box.unused_vars, "is_in": judge}
@@ -93,9 +90,9 @@ class JukugoRelayEnv(Env):
 
     def reset(self, jukugos: Optional[Union[str, List[str]]] = None) -> Dict[str, str]:
         self.jukugo_box.reset()
-        self.update_used_jukugo(jukugos)
+        self.state.reset_std()
         jukugo = self._get_new_jukugo()
-        return {"jukugo": jukugo}
+        self._set_new_state(jukugo)
 
         # 初期状態の更新
         if isinstance(jukugos, str):
@@ -103,6 +100,9 @@ class JukugoRelayEnv(Env):
         elif isinstance(jukugos, list):
             self.jukugo_box.increase_seq(jukugos)
         return self.state
+
+    def step(self, obs: Dict[str, str]) -> State:
+        # 受け取った熟語を使用済に
         old_jukugo: Optional[str] = obs.get("jukugo")
         self.jukugo_box.increase(old_jukugo)
 
@@ -111,27 +111,9 @@ class JukugoRelayEnv(Env):
         if new_jukugo is not None:
             self.jukugo_box.increase(new_jukugo)
 
-        new_obs: Dict[str, str] = {"jukugo": new_jukugo}
-        self.update_used_jukugo(new_obs)
+        self._set_new_state(new_jukugo)
 
-        info: Dict[str, Any]
-        reward: float
-        done: bool
-
-        info, reward, done = self._get_new_state(new_jukugo)
-
-        return new_obs, info, reward, done
-
-    def update_used_jukugo(
-        self, jukugos: Optional[Union[str, List[str]]] = None
-    ) -> None:
-        if isinstance(jukugos, str):
-            self.used_jukugo.append(jukugos)
-        elif isinstance(jukugos, dict):
-            self.used_jukugo.append(jukugos["jukugo"])
-        elif isinstance(jukugos, list):
-            for jukugo in jukugos:
-                self.update_used_jukugo(jukugo)
+        return self.state
 
 
 def run():
@@ -141,15 +123,16 @@ def run():
     # Set Variables
     i: int
     player: JukugoRelayEnv
-    word: Dict[str, str]
+    state: State
     epoch: int
-    done: bool
     _: Any
 
     # Set Constant Values
     num_players: int = 4
     num_games: int = 20
     players: Dict[str, JukugoRelayEnv] = {}
+
+    # logger
     epoch_line: str = "=" * 50
     game_line: str = "*" * 50
     continue_temp: str = "{}: 熟語: {}, ゲーム終了判定: {}"
@@ -168,21 +151,23 @@ def run():
 
         # Initialize Constant
         epoch = 1
-        done = False
 
         # Reset Envs
         for i in range(num_players):
-            word = players[i].reset()
-        print(continue_temp.format("ゲームマスター", word["jukugo"], False))
+            state = players[i].reset()
+        print(continue_temp.format("ゲームマスター", state.obs["jukugo"], False))
 
         # Start Game
-        while not done:
+        while not state.done:
             print(f"Epoch: {epoch}" + epoch_line)
             for i, player in players.items():
-                player.update_used_jukugo(word)
-                word, _, _, done = player.step(word)
-                print(continue_temp.format(player.user_name, word["jukugo"], done))
-                if done:
+                state = player.step(state.obs)
+                print(
+                    continue_temp.format(
+                        player.user_name, state.obs["jukugo"], state.done
+                    )
+                )
+                if state.done:
                     break
             epoch += 1
 
