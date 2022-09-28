@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import yaml
@@ -10,6 +10,8 @@ if len(res) > 0:
     import sys
 
     sys.path.append(src_dir + "/src")
+
+from questions.variable_box import VariablesBox
 
 
 class Env:
@@ -36,17 +38,12 @@ class JukugoRelayEnv(Env):
         user_name: Optional[str] = None,
     ) -> None:
         super().__init__()
-        self.jukugo_dict: List[str] = jukugo_dict
-        self.used_jukugo: List[str] = []
+        self.jukugo_box: VariablesBox = VariablesBox(jukugo_dict, box_id=user_name)
         self.user_id: int = user_id
         self.user_name: Optional[str] = user_name
 
-    @property
-    def dict_size(self) -> int:
-        return len(self.jukugo_dict)
-
-    def _get_unused_jukugo(self) -> np.ndarray:
-        return np.setdiff1d(self.jukugo_dict, self.used_jukugo)
+    def _get_unused_jukugo(self) -> List[Union[int, str]]:
+        return self.jukugo_box.unused_vars
 
     def _get_partial_match_jukugo(
         self, unused_jukugo: List[str], pre_jukugo: Optional[str] = None
@@ -75,8 +72,8 @@ class JukugoRelayEnv(Env):
             jukugo = None
         return jukugo
 
-    def is_in_unused(self, jukugo: str) -> bool:
-        return jukugo in self.jukugo_dict
+    def _set_new_state(self, jukugo: str) -> None:
+        judge: bool = self.jukugo_box.is_still_unused(jukugo)
 
     def _get_new_state(self, jukugo: str) -> Tuple[Dict[str, Any], float, bool]:
         done: bool = False
@@ -89,21 +86,30 @@ class JukugoRelayEnv(Env):
         info: Dict[str, Any] = {"used_jukugo": self.used_jukugo, "is_in": judge}
 
         if not judge:
-            reward -= 1
-        return info, reward, done
+        # 情報更新
+        self.state.set_info(
+            {"unused_jukugo": self.jukugo_box.unused_vars, "is_in": judge}
+        )
 
     def reset(self, jukugos: Optional[Union[str, List[str]]] = None) -> Dict[str, str]:
-        self.used_jukugo = []
+        self.jukugo_box.reset()
         self.update_used_jukugo(jukugos)
         jukugo = self._get_new_jukugo()
         return {"jukugo": jukugo}
 
-    def step(
-        self, obs: Dict[str, str]
-    ) -> Tuple[Dict[str, str], Dict[str, Any], float, bool]:
+        # 初期状態の更新
+        if isinstance(jukugos, str):
+            self.jukugo_box.increase(jukugos)
+        elif isinstance(jukugos, list):
+            self.jukugo_box.increase_seq(jukugos)
+        return self.state
         old_jukugo: Optional[str] = obs.get("jukugo")
-        self.update_used_jukugo(obs)
+        self.jukugo_box.increase(old_jukugo)
+
+        # 提出する熟語を使用済に
         new_jukugo: str = self._get_new_jukugo(old_jukugo)
+        if new_jukugo is not None:
+            self.jukugo_box.increase(new_jukugo)
 
         new_obs: Dict[str, str] = {"jukugo": new_jukugo}
         self.update_used_jukugo(new_obs)
