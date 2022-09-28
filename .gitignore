@@ -4,6 +4,7 @@ data/*
 .*
 *.ipynb
 src/test_data.py
+*.log
 
 # 追跡する！
 !test.py
