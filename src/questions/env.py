@@ -14,6 +14,7 @@ if len(res) > 0:
 
 from questions.state import State
 from questions.variable_box import VariablesBox
+from utils.logger import GameLogger
 
 
 class Env:
@@ -133,11 +134,7 @@ def run():
     players: Dict[str, JukugoRelayEnv] = {}
 
     # logger
-    epoch_line: str = "=" * 50
-    game_line: str = "*" * 50
-    continue_temp: str = "{}: 熟語: {}, ゲーム終了判定: {}"
-    win_temp: str = "勝利: {}"
-    lose_temp: str = "敗北: {}"
+    logger: GameLogger = GameLogger()
 
     # Create Players
     for i in range(num_players):
@@ -147,7 +144,7 @@ def run():
 
     # Create and Run Games
     for game in range(1, num_games + 1):
-        print(f"Game: {game}" + game_line)
+        logger.log("game", (game,))
 
         # Initialize Constant
         epoch = 1
@@ -155,32 +152,30 @@ def run():
         # Reset Envs
         for i in range(num_players):
             state = players[i].reset()
-        print(continue_temp.format("ゲームマスター", state.obs["jukugo"], False))
+        logger.log("continue", ("ゲームマスター", state.obs["jukugo"], False))
 
         # Start Game
         while not state.done:
-            print(f"Epoch: {epoch}" + epoch_line)
+            logger.log("epoch", (epoch,))
             for i, player in players.items():
                 state = player.step(state.obs)
-                print(
-                    continue_temp.format(
-                        player.user_name, state.obs["jukugo"], state.done
-                    )
+                logger.log(
+                    "continue", (player.user_name, state.obs["jukugo"], state.done)
                 )
                 if state.done:
                     break
             epoch += 1
 
         # End Game
-        print(game_line)
+        logger.log("game_end", tuple())
         winner: JukugoRelayEnv = players[(i - 1) % num_players]
         loser: JukugoRelayEnv = player
         if epoch + i > 2:
-            print(win_temp.format(winner.user_name))
-            print(lose_temp.format(loser.user_name))
+            logger.log("win", (winner.user_name,))
+            logger.log("lose", (loser.user_name,))
         else:
-            print(win_temp.format("ゲームマスター"))
-            print(lose_temp.format("プレイヤー"))
+            logger.log("win", ("ゲームマスター",))
+            logger.log("lose", ("プレイヤー",))
 
 
 if __name__ == "__main__":
