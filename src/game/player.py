@@ -1,5 +1,7 @@
 import os
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
 
 # TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
 src_dir, *res = os.getcwd().split("/src")
@@ -84,6 +86,28 @@ class EnvStepPlayer(AbstractPlayer):
         return super().submit(opponent_state, self.env.state)
 
 
+class LevelChangeableESPlayer(EnvStepPlayer):
+    jukugo_rate: Dict[str, float] = {
+        "full": 1.0,
+        "hard": 0.8,
+        "normal": 0.5,
+        "easy": 0.2,
+    }
+
+    def __init__(self, *args, level: str = "normal", **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.level_rate: float = self.jukugo_rate[level]
+        self.level[self.name] = self._create_user_dict()
+
+    def _create_user_dict(self) -> List[int]:
+        available_ids: List[str] = list(self.level.full_set)
+        size: int = int(self.level.max_ids * self.level_rate)
+        samples: List[int] = np.random.choice(
+            available_ids, replace=False, size=size
+        ).tolist()
+        return samples
+
+
 class InputPlayer(AbstractPlayer):
     def input_name(self, name: Optional[str] = None) -> str:
         return input()
@@ -136,17 +160,19 @@ def main() -> None:
 
     jukugo_list: JukugoList = JukugoList()
     game_master: GameMaster = GameMaster(
-        jukugo_list.level["normal"], player_id=0, name="GameMaster"
+        jukugo_list.level["kanjipedia"], player_id=0, name="GameMaster"
     )
-    cpu: AbstractPlayer = EnvStepPlayer(
-        jukugo_list.level["normal"], player_id=0, name="NormalCPU"
+    cpu: AbstractPlayer = LevelChangeableESPlayer(
+        jukugo_list.level["kanjipedia"], player_id=0, level="hard", name="HardCPU"
     )
     cpu.reset()
     if args.play:
-        player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
+        player: AbstractPlayer = InputPlayer(
+            jukugo_list.level["kanjipedia"], player_id=1
+        )
     else:
-        player: AbstractPlayer = EnvStepPlayer(
-            jukugo_list.level["easy"], player_id=1, name="EasyCPU"
+        player: AbstractPlayer = LevelChangeableESPlayer(
+            jukugo_list.level["kanjipedia"], player_id=1, level="easy", name="EasyCPU"
         )
     player.reset()
     print(f"{cpu.name} vs {player.name}")
