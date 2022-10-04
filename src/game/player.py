@@ -129,7 +129,7 @@ def main():
     )
     # player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
     player: AbstractPlayer = EnvStepPlayer(
-        jukugo_list.level["normal"], player_id=1, name="CPU2"
+        jukugo_list.level["easy"], player_id=1, name="CPU2"
     )
     print(f"{cpu.name} vs {player.name}")
 
