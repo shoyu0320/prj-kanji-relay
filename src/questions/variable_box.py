@@ -84,7 +84,7 @@ class VariablesBox:
         return output
 
     def increase(self, val: Optional[Union[int, str]]) -> None:
-        if val is not None:
+        if val in self.variables:
             _id: int = self.variables.index(val)
             self.add2used(_id)
 
