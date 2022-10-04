@@ -31,6 +31,10 @@ class AbstractPlayer:
         self.set_env(self.level)
         self.logger: GameLogger = GameLogger()
 
+    def reset(self):
+        self.env.reset()
+        self.checker.reset()
+
     def input_name(self, name: Optional[str] = None) -> str:
         raise NotImplementedError()
 
