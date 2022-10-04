@@ -160,17 +160,19 @@ def main() -> None:
 
     jukugo_list: JukugoList = JukugoList()
     game_master: GameMaster = GameMaster(
-        jukugo_list.level["normal"], player_id=0, name="GameMaster"
+        jukugo_list.level["kanjipedia"], player_id=0, name="GameMaster"
     )
-    cpu: AbstractPlayer = EnvStepPlayer(
-        jukugo_list.level["normal"], player_id=0, name="NormalCPU"
+    cpu: AbstractPlayer = LevelChangeableESPlayer(
+        jukugo_list.level["kanjipedia"], player_id=0, level="hard", name="HardCPU"
     )
     cpu.reset()
     if args.play:
-        player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
+        player: AbstractPlayer = InputPlayer(
+            jukugo_list.level["kanjipedia"], player_id=1
+        )
     else:
-        player: AbstractPlayer = EnvStepPlayer(
-            jukugo_list.level["easy"], player_id=1, name="EasyCPU"
+        player: AbstractPlayer = LevelChangeableESPlayer(
+            jukugo_list.level["kanjipedia"], player_id=1, level="easy", name="EasyCPU"
         )
     player.reset()
     print(f"{cpu.name} vs {player.name}")
