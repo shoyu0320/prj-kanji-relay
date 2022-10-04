@@ -1,6 +1,6 @@
 import os
 import random
-from typing import FrozenSet, List, Optional, Union
+from typing import Dict, FrozenSet, List, Optional, Union
 
 # TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
 src_dir, *res = os.getcwd().split("/src")
@@ -13,13 +13,38 @@ if len(res) > 0:
 
 class VariablesBox:
     def __init__(
-        self, variables: List[Union[int, str]], box_id: Union[int, str] = 0
+        self,
+        variables: List[Union[int, str]],
+        box_id: Union[int, str] = 0,
+        players: List[str] = [],
     ) -> None:
         self.variables: List[Union[int, str]] = variables
         self.box_id: Union[int, str] = box_id
         self.used_ids: List[int] = []
         self.max_ids: int = len(variables)
+        self.players: Dict[str, List[int]] = {}
 
+    def __setitem__(self, key: str, val: List[int]) -> None:
+        self.players[key] = val
+
+    def __getitem__(self, key: str) -> List[int]:
+        if key not in self.players:
+            return self.full_set
+        return set(self.players[key])
+
+    def get_named_unused_set(self, key: str) -> List[int]:
+        used_ids: FrozenSet[int] = set(self.used_ids)
+        return list(self[key] - used_ids)
+
+    def get_named_unused_vars(self, key: str) -> List[str]:
+        output: List[Union[int, str]] = []
+        us: int
+        available_set: List[str] = self.get_named_unused_set(key)
+        for us in available_set:
+            output += [self.variables[us]]
+        return output
+
+    # TODO プレイヤーごとのフルセットを作成する
     def reset(self):
         self.used_ids = []
 
@@ -28,7 +53,7 @@ class VariablesBox:
         return set(range(self.max_ids))
 
     @property
-    def unused_set(self) -> FrozenSet[int]:
+    def unused_set(self) -> List[int]:
         used_ids: FrozenSet[int] = set(self.used_ids)
         return list(self.full_set - used_ids)
 

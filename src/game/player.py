@@ -1,5 +1,7 @@
 import os
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
 
 # TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
 src_dir, *res = os.getcwd().split("/src")
@@ -82,6 +84,28 @@ class EnvStepPlayer(AbstractPlayer):
         self.env._step(opponent_state.obs)
         self.checker(opponent_state, self.env.state)
         return super().submit(opponent_state, self.env.state)
+
+
+class LevelChangeableESPlayer(EnvStepPlayer):
+    jukugo_rate: Dict[str, float] = {
+        "full": 1.0,
+        "hard": 0.8,
+        "normal": 0.5,
+        "easy": 0.2,
+    }
+
+    def __init__(self, *args, level: str = "normal", **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.level_rate: float = self.jukugo_rate[level]
+        self.level[self.name] = self._create_user_dict()
+
+    def _create_user_dict(self) -> List[int]:
+        available_ids: List[str] = list(self.level.full_set)
+        size: int = int(self.level.max_ids * self.level_rate)
+        samples: List[int] = np.random.choice(
+            available_ids, replace=False, size=size
+        ).tolist()
+        return samples
 
 
 class InputPlayer(AbstractPlayer):

@@ -45,7 +45,7 @@ class JukugoRelayEnv(Env):
         self.user_name: Optional[str] = user_name
 
     def _get_unused_jukugo(self) -> List[Union[int, str]]:
-        return self.jukugo_box.unused_vars
+        return self.jukugo_box.get_named_unused_vars(self.user_name)
 
     def _get_partial_match_jukugo(
         self, unused_jukugo: List[str], pre_jukugo: Optional[str] = None
@@ -89,9 +89,8 @@ class JukugoRelayEnv(Env):
             self.state.reward -= 1.0
 
         # 情報更新
-        self.state.set_info(
-            {"unused_jukugo": self.jukugo_box.unused_vars, "is_in": judge}
-        )
+        unused: List[str] = self.jukugo_box.get_named_unused_vars(self.user_name)
+        self.state.set_info({"unused_jukugo": unused, "is_in": judge})
 
     def reset(self, jukugos: Optional[Union[str, List[str]]] = None) -> Dict[str, str]:
         self.jukugo_box.reset()
