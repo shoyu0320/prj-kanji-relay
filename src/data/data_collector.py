@@ -154,7 +154,7 @@ class SimpleDataCollector(AbstractDataCollector):
             output += self._get_words(element)
         return output
 
-    def _process_html(self, data: BeautifulSoup, selector: str) -> ResultSet[Tag]:
+    def _process_html(self, data: BeautifulSoup, selector: str) -> ResultSet:
         """
         "Return the result of calling the `select` method on the `data`
         parameter, passing in the `selector` parameter."
@@ -181,7 +181,7 @@ class SimpleDataCollector(AbstractDataCollector):
         """
         self.exist_next = selector.endswith("a[href]")
 
-    def _extract_elements(self, selector: str) -> ResultSet[Tag]:
+    def _extract_elements(self, selector: str) -> ResultSet:
         """
         > It takes a selector, gets the HTML from the current URL, creates a
         BeautifulSoup object, sleeps for a bit, and then returns the result of
@@ -224,13 +224,13 @@ class SimpleDataCollector(AbstractDataCollector):
         self._update_urls()
         print(output)
 
-    def _push_outputs(self, elements: ResultSet[Tag], selector: str) -> None:
+    def _push_outputs(self, elements: ResultSet, selector: str) -> None:
         """
         It takes a list of elements and a selector, and for each element, it
         pushes the element's text to the output
 
         Args:
-            elements (ResultSet[Tag]): The elements to push to the output.
+            elements (ResultSet): The elements to push to the output.
             selector (str): The CSS selector that was used to find the element.
         """
         for element in elements:
@@ -258,7 +258,7 @@ class SimpleDataCollector(AbstractDataCollector):
         Args:
             selector (str): The CSS selector to use to extract the elements.
         """
-        elements: ResultSet[Tag] = self._extract_elements(selector)
+        elements: ResultSet = self._extract_elements(selector)
         self._push_outputs(elements, selector)
 
     def _increase_depth(self) -> None:
@@ -309,7 +309,7 @@ class SimpleDataCollector(AbstractDataCollector):
         """
         self._increase_depth()
         selector: str = self.get_selector(selectors)
-        elements: ResultSet[Tag] = self._extract_elements(selector)
+        elements: ResultSet = self._extract_elements(selector)
 
         for element in elements:
             self._push_output(element, selector)

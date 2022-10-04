@@ -28,6 +28,13 @@ class JukugoChecker(AbstractChecker):
         self.level: VariablesBox = level
         self.player_id: int = player_id
         self.assert_level: str = assert_level
+        self._done: bool = False
+
+    def reset(self):
+        self._done = False
+
+    def game_set(self):
+        self._done = True
 
     def _check_unused(self, self_state: State) -> bool:
         jukugo: str = self_state.obs["jukugo"]
@@ -51,6 +58,7 @@ class JukugoChecker(AbstractChecker):
                 raise ValueError(f"{jukugo} has already been used.")
             elif self.assert_level == "print":
                 print(f"使用済みの熟語です。; {jukugo}")
+            self.game_set()
 
         elif not self._check_difference(opponent_state, self_state):
             o_jukugo: str = opponent_state.obs["jukugo"]
@@ -64,3 +72,6 @@ class JukugoChecker(AbstractChecker):
                 )
             elif self.assert_level == "print":
                 print(f"ゲーム規則に反した熟語です。;" f"\n相手の熟語: {o_jukugo}\nあなたの熟語: {s_jukugo}")
+            self.game_set()
+
+        self_state.done = self._done

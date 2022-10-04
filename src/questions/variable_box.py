@@ -1,6 +1,6 @@
 import os
 import random
-from typing import FrozenSet, List, Union
+from typing import FrozenSet, List, Optional, Union
 
 # TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
 src_dir, *res = os.getcwd().split("/src")
@@ -83,9 +83,10 @@ class VariablesBox:
             output += self.pull()
         return output
 
-    def increase(self, val: Union[int, str]) -> None:
-        _id: int = self.variables.index(val)
-        self.add2used(_id)
+    def increase(self, val: Optional[Union[int, str]]) -> None:
+        if val in self.variables:
+            _id: int = self.variables.index(val)
+            self.add2used(_id)
 
     def increase_seq(self, vals: List[Union[int, str]]) -> None:
         v: List[Union[int, str]]

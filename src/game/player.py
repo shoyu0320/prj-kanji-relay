@@ -31,6 +31,10 @@ class AbstractPlayer:
         self.set_env(self.level)
         self.logger: GameLogger = GameLogger()
 
+    def reset(self):
+        self.env.reset()
+        self.checker.reset()
+
     def input_name(self, name: Optional[str] = None) -> str:
         raise NotImplementedError()
 
@@ -52,7 +56,7 @@ class DummyPlayer(AbstractPlayer):
     def input_name(self, name: str):
         if not isinstance(name, str):
             raise TypeError(
-                "Name type must be str;" f"but input name type is {type(name)}"
+                "Name type must be str; but input name type is {type(name)}"
             )
         return name
 
@@ -119,15 +123,32 @@ class GameMaster(AbstractPlayer):
         return self.env.state
 
 
-def main():
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--play",
+        action="store_true",
+        help=("If you play the game, you must set this command."),
+    )
+    args = parser.parse_args()
+
     jukugo_list: JukugoList = JukugoList()
     game_master: GameMaster = GameMaster(
         jukugo_list.level["normal"], player_id=0, name="GameMaster"
     )
     cpu: AbstractPlayer = EnvStepPlayer(
-        jukugo_list.level["normal"], player_id=0, name="CPU1"
+        jukugo_list.level["normal"], player_id=0, name="NormalCPU"
     )
-    player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
+    cpu.reset()
+    if args.play:
+        player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
+    else:
+        player: AbstractPlayer = EnvStepPlayer(
+            jukugo_list.level["easy"], player_id=1, name="EasyCPU"
+        )
+    player.reset()
     print(f"{cpu.name} vs {player.name}")
 
     # logger
@@ -152,8 +173,8 @@ def main():
     winner: JukugoRelayEnv = [cpu, player][(i - 1) % 2]
     loser: JukugoRelayEnv = p
     if epoch + i > 2:
-        logger.log("win", (winner.user_name,))
-        logger.log("lose", (loser.user_name,))
+        logger.log("win", (winner.name,))
+        logger.log("lose", (loser.name,))
     else:
         logger.log("win", (game_master.name,))
         logger.log("lose", (" & ".join([p.name for p in [cpu, player]]),))

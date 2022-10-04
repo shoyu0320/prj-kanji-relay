@@ -112,7 +112,7 @@ class JukugoRelayEnv(Env):
         self.jukugo_box.increase(old_jukugo)
 
         # 提出する熟語を使用済に
-        new_jukugo: str = self._get_new_jukugo(old_jukugo)
+        new_jukugo: Optional[str] = self._get_new_jukugo(old_jukugo)
         self._set_new_state(new_jukugo)
 
         return new_jukugo
