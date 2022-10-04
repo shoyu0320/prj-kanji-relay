@@ -5,8 +5,7 @@ import yaml
 
 class JukugoList:
     level2dir: Dict[str, str] = {
-        "normal": {"jdir": "../../data/niji-jukugo_list.yml", "jtype": "dict"},
-        "easy": {"jdir": "../../data/niji-jukugo.yml", "jtype": "list"},
+        "kanjipedia": {"jdir": "../../data/niji-jukugo_list.yml", "jtype": "dict"},
     }
 
     def __init__(self):
@@ -40,4 +39,3 @@ class JukugoList:
             data: Dict[str, Dict[str]] = yaml.safe_load(f)
             list_data: List[str] = list(data.keys())
         return list_data
-
