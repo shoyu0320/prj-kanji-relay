@@ -123,18 +123,32 @@ class GameMaster(AbstractPlayer):
         return self.env.state
 
 
-def main():
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--play",
+        action="store_true",
+        help=("If you play the game, you must set this command."),
+    )
+    args = parser.parse_args()
+
     jukugo_list: JukugoList = JukugoList()
     game_master: GameMaster = GameMaster(
         jukugo_list.level["normal"], player_id=0, name="GameMaster"
     )
     cpu: AbstractPlayer = EnvStepPlayer(
-        jukugo_list.level["normal"], player_id=0, name="CPU1"
+        jukugo_list.level["normal"], player_id=0, name="NormalCPU"
     )
-    # player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
-    player: AbstractPlayer = EnvStepPlayer(
-        jukugo_list.level["easy"], player_id=1, name="CPU2"
-    )
+    cpu.reset()
+    if args.play:
+        player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
+    else:
+        player: AbstractPlayer = EnvStepPlayer(
+            jukugo_list.level["easy"], player_id=1, name="EasyCPU"
+        )
+    player.reset()
     print(f"{cpu.name} vs {player.name}")
 
     # logger
