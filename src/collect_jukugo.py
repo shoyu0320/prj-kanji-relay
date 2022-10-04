@@ -15,8 +15,7 @@ if len(res) > 0:
 try:
     from data.data_collector import AbstractDataCollector, SimpleDataCollector
     from data.data_saver import SimpleDataSaver
-
-    from .data.extract_data import identity_fn, sieve_fn
+    from data.extract_data import identity_fn, sieve_fn
 except ImportError:
     raise
 
@@ -56,13 +55,13 @@ def main() -> None:
     parser.add_argument(
         "--inputs",
         type=str,
-        default="../data/",
+        default="../data/test/",
         help=("If you save output in a DataCollector, you must set this argument."),
     )
     parser.add_argument(
         "--savedir",
         type=str,
-        default="../data/",
+        default="../data/test/",
         help=("If you save output in a DataCollector, you must set this argument."),
     )
     args = parser.parse_args()
