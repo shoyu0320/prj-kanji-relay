@@ -52,7 +52,7 @@ class DummyPlayer(AbstractPlayer):
     def input_name(self, name: str):
         if not isinstance(name, str):
             raise TypeError(
-                "Name type must be str;" f"but input name type is {type(name)}"
+                "Name type must be str; but input name type is {type(name)}"
             )
         return name
 
@@ -127,7 +127,10 @@ def main():
     cpu: AbstractPlayer = EnvStepPlayer(
         jukugo_list.level["normal"], player_id=0, name="CPU1"
     )
-    player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
+    # player: AbstractPlayer = InputPlayer(jukugo_list.level["normal"], player_id=1)
+    player: AbstractPlayer = EnvStepPlayer(
+        jukugo_list.level["normal"], player_id=1, name="CPU2"
+    )
     print(f"{cpu.name} vs {player.name}")
 
     # logger
@@ -152,8 +155,8 @@ def main():
     winner: JukugoRelayEnv = [cpu, player][(i - 1) % 2]
     loser: JukugoRelayEnv = p
     if epoch + i > 2:
-        logger.log("win", (winner.user_name,))
-        logger.log("lose", (loser.user_name,))
+        logger.log("win", (winner.name,))
+        logger.log("lose", (loser.name,))
     else:
         logger.log("win", (game_master.name,))
         logger.log("lose", (" & ".join([p.name for p in [cpu, player]]),))
