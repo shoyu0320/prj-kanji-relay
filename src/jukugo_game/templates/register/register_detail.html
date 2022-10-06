@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ログイン履歴</title>
+</head>
+
+<body>
+    <p>日付: {{ user.date }}</p>
+    <p>名前: {{ user.user_name }}</p>
+    <a href="{% url 'register:register_index' %}">戻る</a>
+</body>
+
+</html>
