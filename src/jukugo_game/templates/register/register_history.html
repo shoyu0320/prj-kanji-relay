@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ログイン履歴</title>
+</head>
+
+<body>
+    {% for user in users %}
+    <p>
+        {{ user.date }}
+        <a href="{% url 'register:register_detail' user.pk %}">{{ user.user_name }}がログインしました。</a>
+    </p>
+    {% endfor %}
+    <a href="{% url 'register:register_index' %}">戻る</a>
+</body>
+
+</html>
