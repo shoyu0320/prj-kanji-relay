@@ -7,11 +7,12 @@
 </head>
 
 <body>
-
+    <h1>前の熟語: 漢字</h1>
+    <p>前の熟語: {{ game.pre_jukugo }}</p>
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit">Sign in</button>
+        <button type="submit">submit</button>
     </form>
 
 </body>
