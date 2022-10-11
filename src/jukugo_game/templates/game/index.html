@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ユーザー画面</title>
+</head>
+
+<body>
+    <h1>{{ author }}</h1>
+    <h2>{{ game.account_id.user_name }}:{{ game.account_id.id }}</h2>
+    <h2><a href="{% url 'game:input_jukugo' account_id.id %}">ゲーム開始</a></h2>
+</body>
+
+</html>

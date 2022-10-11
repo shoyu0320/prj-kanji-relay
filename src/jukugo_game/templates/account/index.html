@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ログイン画面</title>
+</head>
+
+<body>
+    {% if request.user.is_authenticated %}
+    <div class="account-menu">
+        <h1>熟語リレー</h1>
+        <h2><a href="{% url 'account:user' player.pk %}">マイページ</a></h2>
+        <h2><a href="{% url 'logout' %}">ログアウト</a></h2>
+    </div>
+    {% else %}
+    <div class="user-menu">
+        <h1>熟語リレー</h1>
+        <h2><a href="{% url 'account:login' %}">ログイン</a></h2>
+        <h2><a href="{% url 'signup' %}">ユーザー登録</a></h2>
+    </div>
+    {% endif %}
+</body>
+
+</html>
