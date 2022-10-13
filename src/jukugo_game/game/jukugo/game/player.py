@@ -94,9 +94,9 @@ class LevelChangeableESPlayer(EnvStepPlayer):
         "easy": 0.2,
     }
 
-    def __init__(self, *args, level: str = "normal", **kwargs) -> None:
+    def __init__(self, *args, difficulty: str = "normal", **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.level_rate: float = self.jukugo_rate[level]
+        self.level_rate: float = self.jukugo_rate[difficulty]
         available_jukugo: List[int] = self._create_user_dict()
         self.level.set_available_list(available_jukugo)
 
