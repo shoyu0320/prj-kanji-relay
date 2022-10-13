@@ -16,6 +16,12 @@ class JukugoList:
         self.scope: Optional[List[int]] = scope
         self.mode: Optional[str] = mode
 
+    def set_scope(self, scope: Optional[List[int]] = None) -> None:
+        self.scope = scope
+
+    def set_mode(self, mode: Optional[str] = None) -> None:
+        self.mode = mode
+
     def clean_list(self, j_list: List[str]) -> List[str]:
         j: str
         new_set: Set[str] = set([])
