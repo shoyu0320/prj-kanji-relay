@@ -85,6 +85,10 @@ class VariablesBox:
             print(f"辞書にない熟語です。; {val}")
             return False
 
+    def set_available_list(self, available_samples: List[int]) -> None:
+        unavailable_samples: FrozenSet[int] = self.full_set - set(available_samples)
+        self.add(list(unavailable_samples))
+
     def add(self, used_ids: List[int]) -> None:
         for u_ids in used_ids:
             self.add2used(u_ids)

@@ -97,10 +97,11 @@ class LevelChangeableESPlayer(EnvStepPlayer):
     def __init__(self, *args, level: str = "normal", **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.level_rate: float = self.jukugo_rate[level]
-        self.level[self.name] = self._create_user_dict()
+        available_jukugo: List[int] = self._create_user_dict()
+        self.level.set_available_list(available_jukugo)
 
     def _create_user_dict(self) -> List[int]:
-        available_ids: List[str] = list(self.level.full_set)
+        available_ids: List[int] = list(self.level.full_set)
         size: int = int(self.level.max_ids * self.level_rate)
         samples: List[int] = np.random.choice(
             available_ids, replace=False, size=size
