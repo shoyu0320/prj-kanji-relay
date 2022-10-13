@@ -21,4 +21,3 @@ class LoginForm(AuthenticationForm):
     class Meta:
         model: Model = SpecialUser
         fields: Tuple[str, ...] = ("username", "password")
-
