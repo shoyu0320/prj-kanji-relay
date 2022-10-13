@@ -4,13 +4,9 @@ from . import views
 
 app_name = "game"
 urlpatterns = [
-    path("account/", views.AccountView.as_view(), name="account"),
-    path(
-        "account/<uuid:pk>/jukugo_game/",
-        views.InputJukugoView.as_view(),
-        name="input_jukugo",
-    ),
-    path("win/", views.GameWinView.as_view(), name="game_win",),
-    path("lose/", views.GameLoseView.as_view(), name="game_lose"),
-    path("detail/", views.GameDetailView.as_view(), name="game_detail",),
+    path("", views.GameStartView.as_view(), name="start"),
+    path("<str:level>/", views.GamePlayView.as_view(), name="play"),
+    path("win/", views.GameWinView.as_view(), name="win",),
+    path("lose/", views.GameLoseView.as_view(), name="lose"),
+    path("detail/", views.GameDetailView.as_view(), name="detail",),
 ]

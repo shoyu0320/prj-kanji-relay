@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 
@@ -7,5 +7,5 @@ urlpatterns = [
     # log in
     path("", views.SuperLoginView.as_view(), name="login"),
     path("<int:pk>/", views.SuperUserView.as_view(), name="user"),
-    path("guest/", views.GuestView.as_view(), name="guest"),
+    path("<int:pk>/game/", include("game.urls")),
 ]
