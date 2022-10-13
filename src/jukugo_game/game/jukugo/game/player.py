@@ -33,6 +33,9 @@ class AbstractPlayer:
         self.set_env(self.level)
         self.logger: GameLogger = GameLogger()
 
+    def set_id(self, player_id: int = 0) -> None:
+        self.player_id = player_id
+
     def reset(self):
         self.env.reset()
         self.checker.reset()
