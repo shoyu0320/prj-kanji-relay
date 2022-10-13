@@ -1,4 +1,5 @@
 import uuid
+from tabnanny import verbose
 from typing import Optional, TypeVar
 from uuid import UUID
 
@@ -17,6 +18,12 @@ class Computer(models.Model):
     jukugo: _F = models.CharField(
         verbose_name="熟語", default=None, null=True, max_length=10
     )
+    jukugo_id: _F = models.IntegerField(
+        verbose_name="熟語ID", default=None, null=True
+    )
+    yomi: _F = models.CharField(
+        verbose_name="読み", default=None, null=True, max_length=20
+    )
     # 継続状態:True/負け状態:False(次の熟語が出てこない;None)/その他:Null
     state: _F = models.BooleanField(verbose_name="勝ち負け", null=True, max_length=10)
     # 相手の難易度もついでに書いとく
@@ -31,6 +38,12 @@ class Computer(models.Model):
 class Player(models.Model):
     jukugo: _F = models.CharField(
         verbose_name="熟語", default=None, null=True, max_length=10
+    )
+    jukugo_id: _F = models.IntegerField(
+        verbose_name="熟語ID", default=None, null=True
+    )
+    yomi: _F = models.CharField(
+        verbose_name="読み", default=None, null=True, max_length=20
     )
     # 継続状態:True/負け状態:False(次の熟語が出てこないなど;None)/その他:Null
     state: _F = models.BooleanField(verbose_name="勝ち負け", null=True)
@@ -102,6 +115,12 @@ class Play(models.Model):
     # (相手)->(自分)->(相手)->...
     jukugo: _F = models.CharField(
         verbose_name="リレーした熟語", null=True, default=None, max_length=10
+    )
+    jukugo_id: _F = models.IntegerField(
+        verbose_name="熟語ID", default=None, null=True
+    )
+    yomi: _F = models.CharField(
+        verbose_name="読み", default=None, null=True, max_length=20
     )
     num_rally: _F = models.PositiveIntegerField(verbose_name="ラリー回数", default=0)
     # 続く:False/最後:True
