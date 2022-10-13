@@ -95,14 +95,15 @@ class JukugoRelayEnv(Env):
     def reset(self, jukugos: Optional[Union[str, List[str]]] = None) -> Dict[str, str]:
         self.jukugo_box.reset()
         self.state.reset_std()
-        jukugo = self._get_new_jukugo()
-        self._set_new_state(jukugo)
 
         # 初期状態の更新
         if isinstance(jukugos, str):
             self.jukugo_box.increase(jukugos)
         elif isinstance(jukugos, list):
             self.jukugo_box.increase_seq(jukugos)
+
+        jukugo = self._get_new_jukugo()
+        self._set_new_state(jukugo)
         return self.state
 
     def _step(self, obs: Dict[str, str]) -> State:
