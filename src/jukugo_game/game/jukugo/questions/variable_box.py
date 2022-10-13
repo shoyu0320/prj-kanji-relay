@@ -85,6 +85,11 @@ class VariablesBox:
             print(f"辞書にない熟語です。; {val}")
             return False
 
+    def add(self, used_ids: List[int]) -> None:
+        for u_ids in used_ids:
+            self.add2used(u_ids)
+            self._check_id_list()
+
     def add2used(self, used_id: int) -> None:
         self.used_ids.append(used_id)
         self._check_id_list()
