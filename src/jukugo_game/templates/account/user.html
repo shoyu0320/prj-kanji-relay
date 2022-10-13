@@ -4,15 +4,23 @@
 
 <head>
     <meta charset="utf-8">
-    <title>ユーザー情報</title>
+    <title>{{ user.username }}の情報</title>
 </head>
 
 <body>
-    <h1>{{ user.username }}</h1>
-    <p>連絡先：{{ user.email }}</p>
-    <p>アカウント作成日：{{ user.date_joined }}</p>
-    <p><a href="{% url 'logout'%}">ログアウト</a></p>
-    <h2><a href="{% url 'home' %}">home</a></h2>
+    <h1>
+        熟語リレー
+    </h1>
+    <h2>
+        <a href="{% url 'game:start' pk=user.pk %}">ゲーム開始</a><br>
+        <a href="{% url 'logout'%}">ログアウト</a><br>
+        <a href="{% url 'home' %}">ホーム</a><br>
+    </h2>
+    <h3>
+        Name :{{ user.username }}<br>
+        EMail :{{ user.email }}<br>
+        Created:{{ user.date_joined }}<br>
+    </h3>
 </body>
 
 </html>
