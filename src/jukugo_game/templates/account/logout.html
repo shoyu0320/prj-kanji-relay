@@ -8,8 +8,19 @@
 </head>
 
 <body>
-    <p>ゲストになりました</p>
-    <h2><a href="{% url 'home' %}">home</a></h2>
+    <h2>
+        あなたはゲストです
+    </h2>
+    <h3>
+        他ユーザーたち
+        ユーザー名 / 連絡先<br>
+        {% for player in players %}
+        {{player.username}} / {{player.email}}<br>
+        {% endfor %}
+    </h3>
+    <h2>
+        <a href="{% url 'home' %}">home</a>
+    </h2>
 </body>
 
 </html>
