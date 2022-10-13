@@ -1,27 +1,66 @@
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, TypeVar
 
-from game.jukugo.game.level import JukugoList
-from game.jukugo.game.player import DummyPlayer, LevelChangeableESPlayer
 from game.jukugo.questions.variable_box import VariablesBox
+
+from .level import JukugoList
+from .player import AbstractPlayer, GameMaster
+from .player import LevelChangeableESPlayer as tmp
 
 _S = TypeVar("_S", bound=List[int])
 _V = TypeVar("_V", bound=VariablesBox)
 
+JUKUGO_LIST: JukugoList = JukugoList()["kanjipedia"]
+MASTER: GameMaster = GameMaster(JUKUGO_LIST, player_id=0, name="master")
 
-# 全員別々の辞書を持ってるので、すり合わせが必要
-def create_game(
-    username: str, order: int = 0, level: str = "normal",
-    scope: Optional[_S] = None, mode: Optional[str] = None
-) -> Tuple[DummyPlayer, LevelChangeableESPlayer]:
 
-    jukugo_list: JukugoList = JukugoList(scope, mode)
-    jukugos: Dict[str, Any] = jukugo_list.level["kanjipedia"]
-    player: DummyPlayer = DummyPlayer(
-        jukugos, player_id=order, name=username
-    )
-    cpu_order: int = (order + 1) % 2
-    computer: LevelChangeableESPlayer = LevelChangeableESPlayer(
-        jukugos, player_id=cpu_order, name="CPU", difficulty=level
-    )
+def get_computer_difficulties() -> Dict[str, tmp]:
+    difficulties: Dict[str, int] = {
+        "master": 1.0,
+        "hard": 0.8,
+        "normal": 0.5,
+        "easy": 0.2,
+    }
+    return {
+        d: tmp(
+            JUKUGO_LIST,
+            player_id=0,
+            name="computer",
+            difficulty=r
+        ) for d ,r in difficulties.items()
+    }
 
-    return (player, computer)
+
+DIFFICULTIES: Dict[str, tmp] = get_computer_difficulties()
+
+
+# computerでもplayerでもリセットして初期熟語を削る
+def first(
+    inputs: str = "computer",
+    cpu_level: str = "normal",
+    jukugo: Optional[str] = None
+) -> str:
+    players: Dict[str, AbstractPlayer] = {
+        "master": MASTER,
+        "computer": DIFFICULTIES[cpu_level]
+    }
+
+    player: AbstractPlayer = players[inputs]
+    player.env.reset(jukugo)
+
+    for ap in players.values():
+        ap.level.increase(player.env.state.obs["jukugo"])
+
+    return player.env.state
+
+
+# playerは熟語を入力するのでincreaseのみ、computerの熟語を返す
+def next(cpu_level: str = "normal", jukugo: Optional[str] = None):
+    if jukugo is None:
+        raise ValueError()
+
+    MASTER.level.increase(jukugo)
+    computer: tmp = DIFFICULTIES[cpu_level]
+    computer.env._step({"jukugo": jukugo})
+    computer.level.increase(jukugo)
+
+    return computer.env.state
