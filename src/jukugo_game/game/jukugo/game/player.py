@@ -88,7 +88,7 @@ class EnvStepPlayer(AbstractPlayer):
 
 class LevelChangeableESPlayer(EnvStepPlayer):
     jukugo_rate: Dict[str, float] = {
-        "full": 1.0,
+        "master": 1.0,
         "hard": 0.8,
         "normal": 0.5,
         "easy": 0.2,
