@@ -1,4 +1,4 @@
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 import yaml
 
@@ -8,11 +8,13 @@ class JukugoList:
         "kanjipedia": {"jdir": "../../data/niji-jukugo_list.yml", "jtype": "dict"},
     }
 
-    def __init__(self):
+    def __init__(self, scope: Optional[List[int]] = None, mode: Optional[str] = None):
         self.level: Dict[str, List[str]] = {}
         for k, v in self.level2dir.items():
             j_list: List[str] = self._get_jukugo(**v)
             self.level[k] = self.clean_list(j_list)
+        self.scope: Optional[List[int]] = scope
+        self.mode: Optional[str] = mode
 
     def clean_list(self, j_list: List[str]) -> List[str]:
         j: str
