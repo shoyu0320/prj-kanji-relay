@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>漢字どりる</title>
+</head>
+
+<body>
+    <h1>
+        熟語リレー
+    </h1>
+    <h2>CPU難易度を選択する</h2>
+    <h3>
+        <form method="post" action="">
+            <select id="difficulty" class="form-control" name="level">
+                {% for lv in level %}
+                <option value={{ lv }}></option>
+                {% endfor %}
+                {% csrf_token %}
+                <button type="submit" class="btn">
+                    決定
+                </button>
+            </select>
+        </form>
+    </h3>
+
+</body>
+
+</html>
