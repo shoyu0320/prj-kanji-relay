@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.views.generic import ListView, TemplateView
 
 from .forms import JukugoForm, LevelChoiceForm
+from .jukugo.main import first, next
+from .jukugo.questions.state import State
 from .models import Computer, Play, Player
 
 _M = TypeVar("_M", bound=models.Model)
@@ -61,7 +63,8 @@ class GameStartView(TemplateView):
         # これ綺麗な書き方ありそうだけど知らない
         level: str = form.get_name(selected_level)
         # form経由でなく、modelから直接セーブする方が好き
-        game: _M = Play.create_game(cpu_level=level)
+        start_jukugo: State = first(first="computer", cpu_level=level, jukugo=None)
+        game: _M = Play.create_game(cpu_level=level, start_jukugo=start_jukugo["obj"])
         account: _M = self.account
         account.play.add(game)
 
