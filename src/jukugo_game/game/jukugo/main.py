@@ -64,6 +64,14 @@ def step_players(cpu_levels: str = "normal", jukugo: Optional[str] = None) -> No
         ap.level.increase(jukugo)
 
 
+def set_player_state(jukugo: Optional[str] = None) -> State:
+    if jukugo is None:
+        raise ValueError()
+    MASTER.env._set_new_state(jukugo)
+    MASTER.level.increase(jukugo)
+    return MASTER.env.state
+
+
 # computerでもplayerでもリセットして初期熟語を削る
 # TODO firstはgame:start時点で呼ぶ
 def first(
@@ -96,26 +104,14 @@ def first(
 
 # playerは熟語を入力するのでincreaseのみ、computerの熟語を返す
 # TODO nextはgame:playで使う
-def next(cpu_level: str = "normal", jukugo: Optional[str] = None) -> State:
-    """
-    It takes a jukugo and returns the next state of the game
-
-    Args:
-      cpu_level (str): str = "normal". Defaults to normal
-      jukugo (Optional[str]): The jukugo that the player has chosen.
-
-    Returns:
-      The state of the computer.
-    """
-    if jukugo is None:
-        raise ValueError()
+def next(cpu_level: str = "normal", state: Optional[State] = None) -> State:
+    if state is None:
+        return None
 
     # step env (give jukugo) -> set states -> increase level
-    MASTER.env._set_new_state(jukugo)
-    MASTER.level.increase(jukugo)
     computer: tmp = DIFFICULTIES[cpu_level]
     # step env -> set states -> increase level
-    computer.env._step({"jukugo": jukugo})
+    computer.env._step(state.obs)
     step_players(cpu_level, computer.env.state.obs["jukugo"])
 
     return computer.env.state
