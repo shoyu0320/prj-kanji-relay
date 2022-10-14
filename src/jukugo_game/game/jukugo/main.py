@@ -7,7 +7,7 @@ from game.jukugo.questions.state import State
 
 _A = TypeVar("_A", bound=AbstractPlayer)
 
-JUKUGO_LIST: Dict[str, Any] = JukugoList()["kanjipedia"]
+JUKUGO_LIST: Dict[str, Any] = JukugoList().level["kanjipedia"]
 MASTER: _A = GameMaster(JUKUGO_LIST, player_id=0, name="master")
 DIFFICULTIES: Dict[str, tmp] = tmp.\
     create_all_computers(JUKUGO_LIST, player_id=0, name="computer")
