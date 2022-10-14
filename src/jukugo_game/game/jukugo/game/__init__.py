@@ -11,6 +11,8 @@ _V = TypeVar("_V", bound=VariablesBox)
 
 JUKUGO_LIST: JukugoList = JukugoList()["kanjipedia"]
 MASTER: GameMaster = GameMaster(JUKUGO_LIST, player_id=0, name="master")
+DIFFICULTIES: Dict[str, tmp] = tmp.\
+    create_all_computers(JUKUGO_LIST, player_id=0, name="computer")
 
 
 def get_computer_difficulties() -> Dict[str, tmp]:

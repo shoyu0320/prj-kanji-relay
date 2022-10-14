@@ -103,6 +103,22 @@ class LevelChangeableESPlayer(EnvStepPlayer):
         ).tolist()
         return samples
 
+    @classmethod
+    def create_all_computers(
+        cls,
+        jukugo_list: List[str],
+        player_id: int = 0,
+        name: str = "computer"
+    ) -> Dict[str, _C]:
+        return {
+            d: cls(
+                jukugo_list,
+                player_id=player_id,
+                name=name,
+                difficulty=d
+            ) for d in cls.difficulties.keys()
+        }
+
 
 class InputPlayer(AbstractPlayer):
     def input_name(self, name: Optional[str] = None) -> str:
