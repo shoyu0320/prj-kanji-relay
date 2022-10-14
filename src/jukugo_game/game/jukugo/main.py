@@ -31,6 +31,19 @@ def set_id(first: str = "computer", cpu_level: str = "normal") -> None:
     DIFFICULTIES[cpu_level].set_id(cpu_id)
 
 
+def get_players(cpu_level: str = "normal") -> Dict[str, _A]:
+    return {
+        "master": MASTER,
+        "computer": DIFFICULTIES[cpu_level]
+    }
+
+
+def step_players(cpu_levels: str = "normal", jukugo: Optional[str] = None) -> None:
+    players: Dict[str, _A] = get_players(cpu_levels)
+    for ap in players.values():
+        ap.level.increase(jukugo)
+
+
 # computerでもplayerでもリセットして初期熟語を削る
 # TODO firstはgame:start時点で呼ぶ
 def first(
@@ -50,18 +63,13 @@ def first(
     Returns:
         The state of the game.
     """
-    players: Dict[str, _A] = {
-        "master": MASTER,
-        "computer": DIFFICULTIES[cpu_level]
-    }
+    players: Dict[str, _A] = get_players(cpu_level=cpu_level)
 
     # TODO idのセットが一回で全てに適用されるのか気になる
     set_id(first=first, cpu_level=cpu_level)
     player: _A = players[first]
     player.env.reset(jukugo)
-
-    for ap in players.values():
-        ap.level.increase(player.env.state.obs["jukugo"])
+    step_players(player.env.state.obs["jukugo"])
 
     return player.env.state
 
@@ -88,7 +96,6 @@ def next(cpu_level: str = "normal", jukugo: Optional[str] = None) -> State:
     computer: tmp = DIFFICULTIES[cpu_level]
     # step env -> set states -> increase level
     computer.env._step({"jukugo": jukugo})
-    computer.env._set_new_state(computer.env.state)
-    computer.level.increase(jukugo)
+    step_players(computer.env.state.obs["jukugo"])
 
     return computer.env.state
