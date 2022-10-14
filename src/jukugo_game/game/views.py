@@ -105,15 +105,15 @@ class GamePlayView(TemplateView):
         return vj | dl
 
     @property
-    def account(self) -> SpecialUser:
+    def account(self) -> _O:
         pk: str = self.kwargs["pk"]
-        account: SpecialUser = SpecialUser.objects.get(pk=pk)
+        account: SpecialUser = SpecialUser.objects.filter(pk=pk)
         return account
 
     @property
     def current_game(self) -> Optional[_O]:
-        account: SpecialUser = self.account
-        return account.objects.last()
+        account: _O = self.account
+        return account.last()
 
     # def _submit_jukugo(self, jukugo: str) -> None:
 
