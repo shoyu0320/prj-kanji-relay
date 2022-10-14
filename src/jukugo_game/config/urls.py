@@ -25,5 +25,5 @@ urlpatterns = [
     # log out
     path("logout/", views.SuperLogoutView.as_view(), name="logout"),
     path("account/", include("account.urls")),
-    path("game/<int:pk>/", include("game.urls")),
+    path("game/user_id=<int:pk>/", include("game.urls")),
 ]
