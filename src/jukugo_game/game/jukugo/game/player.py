@@ -20,7 +20,7 @@ class AbstractPlayer:
         self.player_id: int = player_id
         self.level: VariablesBox(level) = VariablesBox(level)
         self.checker: Optional[JukugoChecker] = JukugoChecker(
-            self.level, self.player_id
+            self.level, self.player_id, assert_level="none"
         )
         self.set_env(self.level)
         self.logger: GameLogger = GameLogger()
@@ -84,9 +84,9 @@ class EnvStepPlayer(AbstractPlayer):
 class LevelChangeableESPlayer(EnvStepPlayer):
     difficulties: Dict[str, float] = {
         "master": 1.0,
-        "hard": 0.8,
-        "normal": 0.5,
-        "easy": 0.2,
+        "hard": 0.3,
+        "normal": 0.1,
+        "easy": 0.05,
     }
 
     def __init__(self, *args, difficulty: str = "normal", **kwargs) -> None:
