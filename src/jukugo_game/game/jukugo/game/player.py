@@ -1,5 +1,4 @@
-import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypeVar, Union
 
 import numpy as np
 from game.jukugo.questions.env import JukugoRelayEnv
@@ -10,18 +9,7 @@ from game.jukugo.utils.logger import GameLogger
 from .checker import JukugoChecker
 from .level import JukugoList
 
-if len(res) > 0:
-    import sys
-
-    sys.path.append(src_dir + "/src")
-
-
-from game.checker import JukugoChecker
-from game.level import JukugoList
-from questions.env import JukugoRelayEnv
-from questions.state import State
-from questions.variable_box import VariablesBox
-from utils.logger import GameLogger
+_C = TypeVar("_C", bound="LevelChangeableESPlayer")
 
 
 class AbstractPlayer:
@@ -94,7 +82,7 @@ class EnvStepPlayer(AbstractPlayer):
 
 
 class LevelChangeableESPlayer(EnvStepPlayer):
-    jukugo_rate: Dict[str, float] = {
+    difficulties: Dict[str, float] = {
         "master": 1.0,
         "hard": 0.8,
         "normal": 0.5,
@@ -103,7 +91,7 @@ class LevelChangeableESPlayer(EnvStepPlayer):
 
     def __init__(self, *args, difficulty: str = "normal", **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.level_rate: float = self.jukugo_rate[difficulty]
+        self.level_rate: float = self.difficulties[difficulty]
         available_jukugo: List[int] = self._create_user_dict()
         self.level.set_available_list(available_jukugo)
 
