@@ -63,8 +63,8 @@ class GameStartView(TemplateView):
         # これ綺麗な書き方ありそうだけど知らない
         level: str = form.get_name(selected_level)
         # form経由でなく、modelから直接セーブする方が好き
-        start_jukugo: State = first(first="computer", cpu_level=level, jukugo=None)
-        game: _M = Play.create_game(cpu_level=level, start_jukugo=start_jukugo["obj"])
+        start_state: State = first(first="computer", cpu_level=level, jukugo=None)
+        game: _M = Play.create_game(cpu_level=level, start_jukugo=start_state.obs["jukugo"])
         account: _M = self.account
         account.play.add(game)
 
