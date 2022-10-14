@@ -14,29 +14,20 @@ DIFFICULTIES: Dict[str, tmp] = tmp.\
     create_all_computers(JUKUGO_LIST, player_id=0, name="computer")
 
 
-def get_computer_difficulties() -> Dict[str, tmp]:
-    difficulties: Dict[str, int] = {
-        "master": 1.0,
-        "hard": 0.8,
-        "normal": 0.5,
-        "easy": 0.2,
-    }
-    return {
-        d: tmp(
-            JUKUGO_LIST,
-            player_id=0,
-            name="computer",
-            difficulty=r
-        ) for d ,r in difficulties.items()
-    }
-
-
-DIFFICULTIES: Dict[str, tmp] = get_computer_difficulties()
+def set_id(first: str = "computer", cpu_level: str = "normal") -> None:
+    master_id: int = 0
+    cpu_id: int = 0
+    if first == "computer":
+        master_id += 1
+    else:
+        cpu_id += 1
+    MASTER.set_id(master_id)
+    DIFFICULTIES[cpu_level].set_id(cpu_id)
 
 
 # computerでもplayerでもリセットして初期熟語を削る
 def first(
-    inputs: str = "computer",
+    first: str = "computer",
     cpu_level: str = "normal",
     jukugo: Optional[str] = None
 ) -> str:
@@ -45,7 +36,8 @@ def first(
         "computer": DIFFICULTIES[cpu_level]
     }
 
-    player: AbstractPlayer = players[inputs]
+    set_id(first=first, cpu_level=cpu_level)
+    player: _A = players[first]
     player.env.reset(jukugo)
 
     for ap in players.values():
