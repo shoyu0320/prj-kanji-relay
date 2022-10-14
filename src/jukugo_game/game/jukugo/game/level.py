@@ -5,7 +5,7 @@ import yaml
 
 class JukugoList:
     level2dir: Dict[str, str] = {
-        "kanjipedia": {"jdir": "../../data/niji-jukugo_list.yml", "jtype": "dict"},
+        "kanjipedia": {"j_dir": "../../data/niji-jukugo_list.yml", "jtype": "dict"},
     }
 
     def __init__(self, scope: Optional[List[int]] = None, mode: Optional[str] = None):
@@ -31,11 +31,11 @@ class JukugoList:
             new_set.add(j)
         return list(new_set)
 
-    def _get_jukugo(self, jdir: str, jtype: str = "dict") -> List[str]:
+    def _get_jukugo(self, j_dir: str, jtype: str = "dict") -> List[str]:
         if jtype == "dict":
-            return self._get_jukugo_dict(jdir)
+            return self._get_jukugo_dict(j_dir)
         elif jtype == "list":
-            return self._get_jukugo_list(jdir)
+            return self._get_jukugo_list(j_dir)
 
     def _get_jukugo_list(self, jukugo_dir: str) -> List[str]:
         with open(jukugo_dir) as f:
