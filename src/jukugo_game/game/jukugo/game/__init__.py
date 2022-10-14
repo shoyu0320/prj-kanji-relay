@@ -1,15 +1,14 @@
-from typing import Dict, List, Optional, TypeVar
+from typing import Any, Dict, Optional, TypeVar
 
-from game.jukugo.questions.variable_box import VariablesBox
+from game.jukugo.questions.state import State
 
 from .level import JukugoList
 from .player import AbstractPlayer, GameMaster
 from .player import LevelChangeableESPlayer as tmp
 
-_S = TypeVar("_S", bound=List[int])
-_V = TypeVar("_V", bound=VariablesBox)
+_A = TypeVar("_A", bound=AbstractPlayer)
 
-JUKUGO_LIST: JukugoList = JukugoList()["kanjipedia"]
+JUKUGO_LIST: Dict[str, Any] = JukugoList()["kanjipedia"]
 MASTER: GameMaster = GameMaster(JUKUGO_LIST, player_id=0, name="master")
 DIFFICULTIES: Dict[str, tmp] = tmp.\
     create_all_computers(JUKUGO_LIST, player_id=0, name="computer")
@@ -41,7 +40,7 @@ def first(
     cpu_level: str = "normal",
     jukugo: Optional[str] = None
 ) -> str:
-    players: Dict[str, AbstractPlayer] = {
+    players: Dict[str, _A] = {
         "master": MASTER,
         "computer": DIFFICULTIES[cpu_level]
     }
@@ -56,7 +55,7 @@ def first(
 
 
 # playerは熟語を入力するのでincreaseのみ、computerの熟語を返す
-def next(cpu_level: str = "normal", jukugo: Optional[str] = None):
+def next(cpu_level: str = "normal", jukugo: Optional[str] = None) -> State:
     if jukugo is None:
         raise ValueError()
 
