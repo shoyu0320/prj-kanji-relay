@@ -21,12 +21,18 @@ _C = TypeVar("_C", bound=Computer)
 
 class GameStartView(TemplateView):
     template_name: str = "game/game_start.html"
-    context_object_name: str = "level"
+    context_object_name: str = "play"
+    model = Play
 
     @property
-    def account(self) -> SpecialUser:
+    def account(self) -> _O:
         pk: int = self.kwargs["pk"]
         return SpecialUser.objects.get(pk=pk)
+
+    @property
+    def current_game(self) -> Optional[_O]:
+        account: _O = self.account
+        return account.play.last()
 
     def _get_url(self, kwargs: Dict[str, Any]) -> str:
         if self._level_defined(kwargs):
@@ -66,8 +72,9 @@ class GameStartView(TemplateView):
         level: str = form.get_name(selected_level)
         # form経由でなく、modelから直接セーブする方が好き
         start_state: State = first(first="computer", cpu_level=level, jukugo=None)
-        game: _M = Play.create_game(cpu_level=level, start_jukugo=start_state.obs["jukugo"])
-        account: _M = self.account
+        game: _M = Play.\
+            create_game(cpu_level=level, start_jukugo=start_state.obs["jukugo"])
+        account: _O = self.account
         account.play.add(game)
 
     def redirect(self) -> HttpResponseRedirect:
@@ -93,8 +100,7 @@ class GameStartView(TemplateView):
 class GamePlayView(TemplateView):
     template_name: str = "game/game_play.html"
     context_object_name: str = "play"
-    # model: Play = Play
-    # form_class: JukugoForm = JukugoForm
+    model: Play = Play
 
     def is_bad_jukugo(self, jukugo: str) -> bool:
         # ルールに則ってない熟語ならTrue
@@ -120,39 +126,69 @@ class GamePlayView(TemplateView):
         account: _O = self.account
         return account.play.last()
 
+    @property
+    def num_rally(self) -> int:
+        game: _P = self.current_game
+        return int(game.num_rally)
+
+    @property
+    def current_answerer_is_player(self) -> bool:
+        game: _P = self.current_game
+        return game.answerer
+
     def step_game(self, request: HttpRequest, form: JukugoForm) -> bool:
-        game: _M = self.current_game
+        game: _P = self.current_game
 
         # playerを更新
         submitted_jukugo: str = request.POST.get("jukugo")
         player_state: State = set_player_state(submitted_jukugo)
         state: bool = self.is_finished(request, submitted_jukugo)
 
-        player_state.set_obs({"state": ((not state) | (not player_state.done))})
+        player_state.obs.update(is_done=(state | player_state.done))
         player: _P = Player(**player_state.obs)
         player.save()
 
         game.increment(user=player, **player_state.obs)
 
-        if not game.state:
+        if game.is_done:
             return True
 
         # computerを更新
         next_state: State = next(cpu_level=self.kwargs["level"], state=player_state)
-
-        next_state.set_obs({"state": (not next_state.done)})
+        next_state.obs.update(is_done=next_state.done)
         computer: _C = Computer(**next_state.obs)
         computer.save()
 
         game.increment(cpu=computer, **next_state.obs)
 
-        if not game.state:
+        if game.is_done:
             return True
 
         return False
 
+    def _get_attrs(self) -> Dict[str, Any]:
+        kwargs: Dict[str, Any] = {"pk": self.request.user.pk}
+        # TODO 便宜上最後のユーザーを取り出してるけど、セキュアにはIDで取り出すのが良さそう(OBJECT.get(id=specified_id))
+        last_obj: Optional[_O] = Computer.objects.last()
+        level: str = last_obj.level
+        if level is not None:
+            kwargs.update(level=level)
+        return kwargs
+
+    def redirect(self) -> HttpResponseRedirect:
+        url: str = self.get_success_url()
+        return redirect(url)
+
+    def get_success_url(self) -> str:
+        kwargs: Dict[str, Any] = self._get_attrs()
+        url: str = self.get_end_url()
+        return reverse(url, kwargs=kwargs)
+
     def get_end_url(self) -> str:
-        return ""
+        if self.current_answerer_is_player:
+            return "game:win"
+        else:
+            return "game:lose"
 
     def _post(self, request: HttpRequest) -> None:
         form: JukugoForm = JukugoForm(request.POST)
@@ -160,24 +196,24 @@ class GamePlayView(TemplateView):
         if form.is_valid():
             is_done = self.step_game(request, form)
 
-        if is_done:
-            url: str = self.get_end_url()
+        return is_done
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponseRedirect:
         context: Dict[str.Any] = {}
+        is_done: bool = False
         if request.method == "POST":
-            self._post(request)
-            context.update(current=self._get_jukugo_form())
-            context.update(last=self._get_last_jukugo())
+            is_done = self._post(request)
+            context.update(
+                current=self._get_jukugo_form(),
+                last=self._get_last_jukugo(),
+                num_rally=self.num_rally
+            )
 
-        return render(request, self.template_name, context)
-
-    def redirect(self) -> HttpResponseRedirect:
-        url: str = self.get_success_url()
-        return redirect(url)
-
-    def get_success_url(self) -> str:
-        return reverse("game:play", kwargs=self.kwargs)
+        # 初期値=Noneを回避する
+        if (is_done) and (self.num_rally > 0):
+            return self.redirect()
+        else:
+            return render(request, self.template_name, context)
 
     def _get_jukugo_form(self) -> JukugoForm:
         # 熟語の入力フォームを作る
