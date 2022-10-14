@@ -9,7 +9,7 @@ class JukugoForm(forms.ModelForm):
     class Meta:
         model = Player
         app_label = "game"
-        fields = ("jukugo", "lose")
+        fields = ("jukugo",)
 
 
 class LevelChoiceForm(forms.Form):
