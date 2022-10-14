@@ -1,20 +1,11 @@
-import os
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import yaml
+from game.jukugo.utils.logger import GameLogger
 
-# TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
-src_dir, *res = os.getcwd().split("/src")
-
-if len(res) > 0:
-    import sys
-
-    sys.path.append(src_dir + "/src")
-
-from questions.state import State
-from questions.variable_box import VariablesBox
-from utils.logger import GameLogger
+from .state import State
+from .variable_box import VariablesBox
 
 
 class Env:

@@ -1,19 +1,8 @@
-import os
-from typing import List
+
 
 import numpy as np
-
-# TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
-src_dir, *res = os.getcwd().split("/src")
-
-if len(res) > 0:
-    import sys
-
-    sys.path.append(src_dir + "/src")
-
-
-from questions.state import State
-from questions.variable_box import VariablesBox
+from game.jukugo.questions.state import State
+from game.jukugo.questions.variable_box import VariablesBox
 
 
 class AbstractChecker:
@@ -30,10 +19,10 @@ class JukugoChecker(AbstractChecker):
         self.assert_level: str = assert_level
         self._done: bool = False
 
-    def reset(self):
+    def reset(self) -> None:
         self._done = False
 
-    def game_set(self):
+    def game_set(self) -> None:
         self._done = True
 
     def _check_unused(self, self_state: State) -> bool:

@@ -5,19 +5,9 @@ from typing import Dict, List, Optional, Union
 
 import yaml
 
-src_dir, *res = os.getcwd().split("/src")
-
-if len(res) > 0:
-    import sys
-
-    sys.path.append(src_dir + "/src")
-
-try:
-    from data.data_collector import AbstractDataCollector, SimpleDataCollector
-    from data.data_saver import SimpleDataSaver
-    from data.extract_data import identity_fn, sieve_fn
-except ImportError:
-    raise
+from .data.data_collector import AbstractDataCollector, SimpleDataCollector
+from .data.data_saver import SimpleDataSaver
+from .data.extract_data import identity_fn, sieve_fn
 
 
 def collect_data(inputs: Dict[str, str], saver: SimpleDataSaver, filename: str) -> None:
