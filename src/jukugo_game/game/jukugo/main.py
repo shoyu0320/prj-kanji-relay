@@ -83,7 +83,7 @@ def next(cpu_level: str = "normal", jukugo: Optional[str] = None) -> State:
         raise ValueError()
 
     # step env (give jukugo) -> set states -> increase level
-    MASTER.env.set_new_state(jukugo)
+    MASTER.env._set_new_state(jukugo)
     MASTER.level.increase(jukugo)
     computer: tmp = DIFFICULTIES[cpu_level]
     # step env -> set states -> increase level
