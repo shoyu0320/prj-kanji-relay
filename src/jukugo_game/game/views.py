@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.views.generic import ListView, TemplateView
 
 from .forms import JukugoForm, LevelChoiceForm
-from .jukugo.main import first, next
+from .jukugo.main import first, next, set_player_state
 from .jukugo.questions.state import State
 from .models import Computer, Play, Player
 
@@ -110,28 +110,76 @@ class GamePlayView(TemplateView):
     @property
     def account(self) -> _O:
         pk: str = self.kwargs["pk"]
-        account: SpecialUser = SpecialUser.objects.filter(pk=pk)
+        account: _O = SpecialUser.objects.get(pk=pk)
         return account
 
     @property
     def current_game(self) -> Optional[_O]:
         account: _O = self.account
-        return account.last()
+        return account.play.last()
 
-    # def _submit_jukugo(self, jukugo: str) -> None:
-
-
-    def get_game(self, request: HttpRequest, form: JukugoForm) -> None:
-        submitted_jukugo: str = request.POST.get("jukugo")
-        state: bool = self.is_finished(request, submitted_jukugo)
+    def step_game(self, request: HttpRequest, form: JukugoForm) -> bool:
         game: _M = self.current_game
-        assert False, game
-        Play.objects.increment(game, submitted_jukugo, state)
+
+        # playerを更新
+        submitted_jukugo: str = request.POST.get("jukugo")
+        player_state: State = set_player_state(submitted_jukugo)
+        state: bool = self.is_finished(request, submitted_jukugo)
+
+        game.user.jukugo = player_state.obs["jukugo"]
+        game.user.jukugo_id = player_state.obs.get("jukugo_id", None)
+        game.user.yomi = player_state.obs.get("yomi", None)
+        game.user.state = (not state) & (not player_state.done)
+
+        # gameを更新1
+        game.jukugo = player_state.obs["jukugo"]
+        game.jukugo_id = player_state.obs.get("jukugo_id", None)
+        game.yomi = player_state.obs.get("yomi", None)
+        game.state = not (not state) & (not player_state.done)
+        game.answerer = not game.answerer
+        game.num_rally += 1
+
+        # gameを保存する
+        game.save()
+
+        if game.state:
+            return True
+
+        # computerを更新
+        next_state: State = next(cpu_level=self.kwargs["level"], state=player_state)
+
+        game.cpu.jukugo = next_state.obs["jukugo"]
+        game.cpu.jukugo_id = next_state.obs.get("jukugo_id", None)
+        game.cpu.yomi = next_state.obs.get("yomi", None)
+        game.cpu.state = not next_state.done
+
+        # gameを更新2
+        game.jukugo = next_state.obs["jukugo"]
+        game.jukugo_id = next_state.obs.get("jukugo_id", None)
+        game.yomi = next_state.obs.get("yomi", None)
+        game.state = next_state.done
+        game.answerer = not game.answerer
+        game.num_rally += 1
+
+        # gameを保存する
+        game.save()
+
+        if game.state:
+            return True
+
+        return False
+
+    def get_end_url(self) -> str:
+        return ""
+
 
     def _post(self, request: HttpRequest) -> None:
         form: JukugoForm = JukugoForm(request.POST)
         if form.is_valid():
-            self.get_game(request, form)
+            is_done: bool = self.step_game(request, form)
+
+        if is_done:
+            url: str = self.get_end_url()
 
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponseRedirect:
         context: Dict[str.Any] = {}
@@ -155,10 +203,10 @@ class GamePlayView(TemplateView):
 
     def _get_last_jukugo(self) -> str:
         # 直前の相手の熟語を取得する
-        computer: _O = Computer.objects
-        if computer is not None:
-            last: Optional[_O] = computer.last()
-            return last.jukugo
+        game: _O = self.current_game
+        if game is not None:
+            last: Optional[_O] = game.jukugo
+            return last
         else:
             return "熟語"
 
