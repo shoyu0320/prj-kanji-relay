@@ -175,8 +175,9 @@ class GamePlayView(TemplateView):
 
     def _post(self, request: HttpRequest) -> None:
         form: JukugoForm = JukugoForm(request.POST)
+        is_done: bool = False
         if form.is_valid():
-            is_done: bool = self.step_game(request, form)
+            is_done = self.step_game(request, form)
 
         if is_done:
             url: str = self.get_end_url()
