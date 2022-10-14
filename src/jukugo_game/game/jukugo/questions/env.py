@@ -69,7 +69,12 @@ class JukugoRelayEnv(Env):
         judge: bool = self.jukugo_box.is_still_unused(jukugo)
 
         # 観測更新
-        self.state.set_obs({"jukugo": jukugo})
+        # TODO variable_boxにTuple[jukugo, jukugo_id, yomi]を与えて絞り出す
+        self.state.set_obs({
+            "jukugo": jukugo,
+            "jukugo_id": None,
+            "yomi": None
+        })
 
         # 終端、報酬更新
         if jukugo is None:

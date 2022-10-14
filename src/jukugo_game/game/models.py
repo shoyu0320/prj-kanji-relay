@@ -129,3 +129,11 @@ class Play(models.Model):
         db_table: str = "play"
 
     objects: _O = GameManager()
+
+    def increment(self, **kwargs) -> None:
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+        self.num_rally += 1
+        self.answerer = not self.answerer
+        self.save()

@@ -49,18 +49,24 @@ def get_players(cpu_level: str = "normal") -> Dict[str, _A]:
     }
 
 
-def step_players(cpu_levels: str = "normal", jukugo: Optional[str] = None) -> None:
+def step_players(
+    cpu_levels: str = "normal",
+    jukugo: Optional[str] = None,
+    on_first: bool = False
+) -> None:
     """
-    It takes a string of CPU levels and a jukugo,
-    and then increases the level of each player by one
+    It takes a string of CPU levels, a jukugo, and a boolean, and it steps the players
 
     Args:
       cpu_levels (str): str = "normal". Defaults to normal
-      jukugo (Optional[str]): The jukugo to use for the CPU players.
-        If None, the CPU players will use their own jukugo.
+      jukugo (Optional[str]): The jukugo to be used for the level increase. If None, a random jukugo
+    will be used.
+      on_first (bool): If True, the player's level will be reset to 1. Defaults to False
     """
     players: Dict[str, _A] = get_players(cpu_levels)
     for ap in players.values():
+        if on_first:
+            ap.reset()
         ap.level.increase(jukugo)
 
 
@@ -72,7 +78,7 @@ def set_player_state(jukugo: Optional[str] = None) -> State:
     return MASTER.env.state
 
 
-# computerでもplayerでもリセットして初期熟語を削る
+# computerでもplayerでもリセットして初期熟語を与える
 # TODO firstはgame:start時点で呼ぶ
 def first(
     first: str = "computer",
@@ -97,7 +103,7 @@ def first(
     set_id(first=first, cpu_level=cpu_level)
     player: _A = players[first]
     player.env.reset(jukugo)
-    step_players(cpu_level, player.env.state.obs["jukugo"])
+    step_players(cpu_level, player.env.state.obs["jukugo"], on_first=True)
 
     return player.env.state
 

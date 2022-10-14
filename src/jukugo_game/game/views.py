@@ -15,6 +15,8 @@ from .models import Computer, Play, Player
 
 _M = TypeVar("_M", bound=models.Model)
 _O = TypeVar("_O", bound=models.Manager)
+_P = TypeVar("_P", bound=Player)
+_C = TypeVar("_C", bound=Computer)
 
 
 class GameStartView(TemplateView):
@@ -126,52 +128,31 @@ class GamePlayView(TemplateView):
         player_state: State = set_player_state(submitted_jukugo)
         state: bool = self.is_finished(request, submitted_jukugo)
 
-        game.user.jukugo = player_state.obs["jukugo"]
-        game.user.jukugo_id = player_state.obs.get("jukugo_id", None)
-        game.user.yomi = player_state.obs.get("yomi", None)
-        game.user.state = (not state) & (not player_state.done)
+        player_state.set_obs({"state": ((not state) | (not player_state.done))})
+        player: _P = Player(**player_state.obs)
+        player.save()
 
-        # gameを更新1
-        game.jukugo = player_state.obs["jukugo"]
-        game.jukugo_id = player_state.obs.get("jukugo_id", None)
-        game.yomi = player_state.obs.get("yomi", None)
-        game.state = not (not state) & (not player_state.done)
-        game.answerer = not game.answerer
-        game.num_rally += 1
+        game.increment(user=player, **player_state.obs)
 
-        # gameを保存する
-        game.save()
-
-        if game.state:
+        if not game.state:
             return True
 
         # computerを更新
         next_state: State = next(cpu_level=self.kwargs["level"], state=player_state)
 
-        game.cpu.jukugo = next_state.obs["jukugo"]
-        game.cpu.jukugo_id = next_state.obs.get("jukugo_id", None)
-        game.cpu.yomi = next_state.obs.get("yomi", None)
-        game.cpu.state = not next_state.done
+        next_state.set_obs({"state": (not next_state.done)})
+        computer: _C = Computer(**next_state.obs)
+        computer.save()
 
-        # gameを更新2
-        game.jukugo = next_state.obs["jukugo"]
-        game.jukugo_id = next_state.obs.get("jukugo_id", None)
-        game.yomi = next_state.obs.get("yomi", None)
-        game.state = next_state.done
-        game.answerer = not game.answerer
-        game.num_rally += 1
+        game.increment(cpu=computer, **next_state.obs)
 
-        # gameを保存する
-        game.save()
-
-        if game.state:
+        if not game.state:
             return True
 
         return False
 
     def get_end_url(self) -> str:
         return ""
-
 
     def _post(self, request: HttpRequest) -> None:
         form: JukugoForm = JukugoForm(request.POST)
