@@ -23,8 +23,8 @@ class Computer(models.Model):
     yomi: _F = models.CharField(
         verbose_name="読み", default=None, null=True, max_length=20
     )
-    # 継続状態:True/負け状態:False(次の熟語が出てこない;None)/その他:Null
-    state: _F = models.BooleanField(verbose_name="勝ち負け", null=True, max_length=10)
+    # 継続状態:False/負け状態:True(次の熟語が出てこない;None)/その他:Null
+    is_done: _F = models.BooleanField(verbose_name="勝ち負け", null=True, max_length=10)
     # 相手の難易度もついでに書いとく
     level: _F = models.CharField(
         verbose_name="難易度", default="normal", null=True, max_length=10
@@ -44,9 +44,8 @@ class Player(models.Model):
     yomi: _F = models.CharField(
         verbose_name="読み", default=None, null=True, max_length=20
     )
-    # 継続状態:True/負け状態:False(次の熟語が出てこないなど;None)/その他:Null
-    state: _F = models.BooleanField(verbose_name="勝ち負け", null=True)
-    lose: _F = models.BooleanField(verbose_name="負け宣言", default=False)
+    # 継続状態:False/負け状態:True(次の熟語が出てこないなど;None)/その他:Null
+    is_done: _F = models.BooleanField(verbose_name="勝ち負け", null=True)
 
     class Meta:
         db_table = "play_user"
@@ -123,7 +122,7 @@ class Play(models.Model):
     )
     num_rally: _F = models.PositiveIntegerField(verbose_name="ラリー回数", default=0)
     # 続く:False/最後:True
-    state = models.BooleanField(verbose_name="試合終了", default=False)
+    is_done = models.BooleanField(verbose_name="試合終了", default=False)
 
     class Meta:
         db_table: str = "play"
