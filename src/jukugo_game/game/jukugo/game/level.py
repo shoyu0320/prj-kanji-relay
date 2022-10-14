@@ -5,7 +5,7 @@ import yaml
 
 class JukugoList:
     level2dir: Dict[str, str] = {
-        "kanjipedia": {"j_dir": "../../data/niji-jukugo_list.yml", "jtype": "dict"},
+        "kanjipedia": {"j_dir": "game/fixture/jukugo_list.yml", "jtype": "dict"},
     }
 
     def __init__(self, scope: Optional[List[int]] = None, mode: Optional[str] = None):
