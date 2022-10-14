@@ -69,7 +69,7 @@ def first(
     set_id(first=first, cpu_level=cpu_level)
     player: _A = players[first]
     player.env.reset(jukugo)
-    step_players(player.env.state.obs["jukugo"])
+    step_players(cpu_level, player.env.state.obs["jukugo"])
 
     return player.env.state
 
@@ -96,6 +96,6 @@ def next(cpu_level: str = "normal", jukugo: Optional[str] = None) -> State:
     computer: tmp = DIFFICULTIES[cpu_level]
     # step env -> set states -> increase level
     computer.env._step({"jukugo": jukugo})
-    step_players(computer.env.state.obs["jukugo"])
+    step_players(cpu_level, computer.env.state.obs["jukugo"])
 
     return computer.env.state
