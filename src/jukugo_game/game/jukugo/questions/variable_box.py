@@ -58,19 +58,6 @@ class VariablesBox:
             output += [self.variables[us]]
         return output
 
-    def _check_id_list(self) -> None:
-        # unused list のサイズのみで簡易チェックする
-        if len(self.used_ids) > self.max_ids:
-            raise IndexError(
-                "Sequence size of self.used_ids has larger size"
-                f"than {self.max_ids}; number of variables"
-            )
-        if len(self.used_ids) != len(set(self.used_ids)):
-            raise ValueError(
-                "Sequence self.used_ids mustn't"
-                f"have two or more same ids, but; {self.used_ids}"
-            )
-
     def is_still_unused(self, val: _L) -> bool:
         if val in self.unused_vars:
             return True

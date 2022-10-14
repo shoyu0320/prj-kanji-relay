@@ -40,6 +40,27 @@ class JukugoChecker(AbstractChecker):
         differences[self.player_id] *= -1
         return np.all(differences + 1)
 
+    def _check_id_list(self) -> bool:
+        flg: bool = False
+        # unused list のサイズのみで簡易チェックする
+        if len(self.level.used_ids) > self.level.max_ids:
+            if self.assert_level == "error":
+                raise IndexError(
+                    "Sequence size of self.used_ids has larger size"
+                    f"than {self.max_ids}; number of variables"
+                )
+            flg |= True
+
+        if len(self.level.used_ids) != len(set(self.level.used_ids)):
+            if self.assert_level == "error":
+                raise ValueError(
+                        "Sequence self.used_ids mustn't"
+                        f"have two or more same ids, but; {self.used_ids}"
+                    )
+            flg |= True
+
+        return flg
+
     def __call__(self, opponent_state: State, self_state: State) -> None:
         if not self._check_unused(self_state):
             jukugo: str = self_state.obs["jukugo"]
@@ -61,6 +82,9 @@ class JukugoChecker(AbstractChecker):
                 )
             elif self.assert_level == "print":
                 print(f"ゲーム規則に反した熟語です。;" f"\n相手の熟語: {o_jukugo}\nあなたの熟語: {s_jukugo}")
+            self.game_set()
+
+        elif self._check_id_list():
             self.game_set()
 
         self_state.done = self._done
