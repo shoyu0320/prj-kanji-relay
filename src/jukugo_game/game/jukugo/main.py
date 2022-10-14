@@ -32,6 +32,17 @@ def set_id(first: str = "computer", cpu_level: str = "normal") -> None:
 
 
 def get_players(cpu_level: str = "normal") -> Dict[str, _A]:
+    """
+    It returns a dictionary of players, where the keys are "master" and "computer",
+    and the values are the players themselves
+
+    Args:
+        cpu_level (str): The difficulty of the computer player. Defaults to normal
+
+    Returns:
+        A dictionary with two keys, "master" and "computer",
+        and two values, MASTER and DIFFICULTIES[cpu_level].
+    """
     return {
         "master": MASTER,
         "computer": DIFFICULTIES[cpu_level]
@@ -39,6 +50,15 @@ def get_players(cpu_level: str = "normal") -> Dict[str, _A]:
 
 
 def step_players(cpu_levels: str = "normal", jukugo: Optional[str] = None) -> None:
+    """
+    It takes a string of CPU levels and a jukugo,
+    and then increases the level of each player by one
+
+    Args:
+      cpu_levels (str): str = "normal". Defaults to normal
+      jukugo (Optional[str]): The jukugo to use for the CPU players.
+        If None, the CPU players will use their own jukugo.
+    """
     players: Dict[str, _A] = get_players(cpu_levels)
     for ap in players.values():
         ap.level.increase(jukugo)
