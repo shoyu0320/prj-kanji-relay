@@ -6,7 +6,9 @@ from game.jukugo.questions.state import State
 from game.jukugo.questions.variable_box import VariablesBox
 from game.jukugo.utils.logger import GameLogger
 
-from .checker import JukugoChecker
+from .checker import (AbstractCheckType, JukugoCheckerPipeline,
+                      JukugoDifferencesChecker, SequenceSizeChecker,
+                      UnusedJukugoChecker, WordIDChecker)
 from .level import JukugoList
 
 _C = TypeVar("_C", bound="LevelChangeableESPlayer")
@@ -19,8 +21,18 @@ class AbstractPlayer:
         self.name: str = self.input_name(name)
         self.player_id: int = player_id
         self.level: VariablesBox(level) = VariablesBox(level)
-        self.checker: Optional[JukugoChecker] = JukugoChecker(
-            self.level, self.player_id, assert_level="none"
+        self.checker: Optional[JukugoCheckerPipeline] =\
+            JukugoCheckerPipeline(
+            checkers=[
+                UnusedJukugoChecker,
+                JukugoDifferencesChecker,
+                SequenceSizeChecker,
+                WordIDChecker
+            ],
+            level=self.level,
+            player_id=self.player_id,
+            assert_type="comment",
+            valid_method="union"
         )
         self.set_env(self.level)
         self.logger: GameLogger = GameLogger()
@@ -40,11 +52,11 @@ class AbstractPlayer:
         self.env.reset()
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]] = None
+        self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
         self.level.increase(self.env.state.obs["jukugo"])
         self.logger.log(
-            "continue", (self.name, self_state.obs["jukugo"], self_state.done)
+            "continue", (self.name, user_state.obs["jukugo"], user_state.done)
         )
         return self.env.state
 
@@ -58,11 +70,11 @@ class DummyPlayer(AbstractPlayer):
         return name
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]]
+        self, cpu_state: State, user_state: Optional[Union[str, State]]
     ) -> State:
-        self.env._set_new_state(self_state)
-        self.checker(opponent_state, self.env.state)
-        return super().submit(opponent_state, self.env.state)
+        self.env._set_new_state(user_state)
+        self.checker(cpu_state, self.env.state)
+        return super().submit(cpu_state, self.env.state)
 
 
 class EnvStepPlayer(AbstractPlayer):
@@ -74,11 +86,11 @@ class EnvStepPlayer(AbstractPlayer):
         return name
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]] = None
+        self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
-        self.env._step(opponent_state.obs)
-        self.checker(opponent_state, self.env.state)
-        return super().submit(opponent_state, self.env.state)
+        self.env._step(cpu_state.obs)
+        self.checker(cpu_state, self.env.state)
+        return super().submit(cpu_state, self.env.state)
 
 
 class LevelChangeableESPlayer(EnvStepPlayer):
@@ -125,19 +137,19 @@ class InputPlayer(AbstractPlayer):
         return input()
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]] = None
+        self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
         used: bool = True
         while used:
-            self_state = input()
-            used = not self.level.is_still_unused(self_state)
+            user_state = input()
+            used = not self.level.is_still_unused(self_user_statestate)
 
             # State更新
-            self.env._set_new_state(self_state)
-            self.checker(opponent_state, self.env.state)
+            self.env._set_new_state(user_state)
+            self.checker(cpu_state, self.env.state)
 
-        self.env._set_new_state(self_state)
-        return super().submit(opponent_state, self.env.state)
+        self.env._set_new_state(user_state)
+        return super().submit(cpu_state, self.env.state)
 
 
 class GameMaster(AbstractPlayer):
