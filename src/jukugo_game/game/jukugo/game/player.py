@@ -6,9 +6,8 @@ from game.jukugo.questions.state import State
 from game.jukugo.questions.variable_box import VariablesBox
 from game.jukugo.utils.logger import GameLogger
 
-from .checker import (AbstractCheckType, JukugoCheckerPipeline,
-                      JukugoDifferencesChecker, SequenceSizeChecker,
-                      UnusedJukugoChecker, WordIDChecker)
+from .checker import (DefinedJukugoChecker, JukugoDifferencesChecker,
+                      SequenceSizeChecker, UnusedJukugoChecker, WordIDChecker)
 from .level import JukugoList
 
 _C = TypeVar("_C", bound="LevelChangeableESPlayer")
@@ -21,34 +20,32 @@ class AbstractPlayer:
         self.name: str = self.input_name(name)
         self.player_id: int = player_id
         self.level: VariablesBox(level) = VariablesBox(level)
-        self.checker: Optional[JukugoCheckerPipeline] =\
-            JukugoCheckerPipeline(
-            checkers=[
+        checkers: List[_C] = [
+                DefinedJukugoChecker,
                 UnusedJukugoChecker,
                 JukugoDifferencesChecker,
                 SequenceSizeChecker,
                 WordIDChecker
-            ],
-            level=self.level,
-            player_id=self.player_id,
-            assert_type="comment",
-            valid_method="union"
-        )
-        self.set_env(self.level)
+            ]
+        self.set_env(self.level, checkers)
         self.logger: GameLogger = GameLogger()
 
     def set_id(self, player_id: int = 0) -> None:
         self.player_id = player_id
 
-    def reset(self):
-        self.env.reset()
-        self.checker.reset()
+    def reset(self, jukugo: Optional[str] = None) -> None:
+        self.env.reset(jukugo)
 
     def input_name(self, name: Optional[str] = None) -> str:
         raise NotImplementedError()
 
-    def set_env(self, variables: VariablesBox):
-        self.env: JukugoRelayEnv = JukugoRelayEnv(variables, self.player_id, self.name)
+    def set_env(self, variables: VariablesBox, checkers: List[_C] = []) -> None:
+        self.env: JukugoRelayEnv = JukugoRelayEnv(
+            variables,
+            self.player_id,
+            self.name,
+            checkers
+        )
         self.env.reset()
 
     def submit(
@@ -72,9 +69,10 @@ class DummyPlayer(AbstractPlayer):
     def submit(
         self, cpu_state: State, user_state: Optional[Union[str, State]]
     ) -> State:
-        self.env._set_new_state(user_state)
-        self.checker(cpu_state, self.env.state)
-        return super().submit(cpu_state, self.env.state)
+        self.env.set_new_state(user_state)
+        state: State = super().submit(cpu_state, self.env.state)
+        self.env.set_new_state_without_obs()
+        return state
 
 
 class EnvStepPlayer(AbstractPlayer):
@@ -88,9 +86,7 @@ class EnvStepPlayer(AbstractPlayer):
     def submit(
         self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
-        self.env._step(cpu_state.obs)
-        self.checker(cpu_state, self.env.state)
-        return super().submit(cpu_state, self.env.state)
+        return self.step(cpu_state)
 
 
 class LevelChangeableESPlayer(EnvStepPlayer):
@@ -139,17 +135,15 @@ class InputPlayer(AbstractPlayer):
     def submit(
         self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
-        used: bool = True
-        while used:
+        while not self.env.checker.is_not_valid:
+            # Stateセットするだけ
             user_state = input()
-            used = not self.level.is_still_unused(user_state)
+            self.env.set_new_state(user_state)
 
-            # State更新
-            self.env._set_new_state(user_state)
-            self.checker(cpu_state, self.env.state)
-
-        self.env._set_new_state(user_state)
-        return super().submit(cpu_state, self.env.state)
+        self.env.set_new_state(user_state)
+        state: State = super().submit(cpu_state, self.env.state)
+        self.env.set_new_state_without_obs()
+        return state
 
 
 class GameMaster(AbstractPlayer):
@@ -157,12 +151,12 @@ class GameMaster(AbstractPlayer):
         return "GameMaster"
 
     def first(self, mode: str = "input",) -> State:
+        state: State
         if mode == "input":
-            used: bool = True
-            while used:
-                self_state = input()
-                used = not self.level.is_still_unused(self_state)
-            self.env._set_new_state(self_state)
+            while not self.checker.is_not_valid:
+                state = input()
+                self.env.set_new_state(state)
+            self.env.set_new_state_without_obs()
         elif mode == "auto":
             self.env.reset()
         else:
