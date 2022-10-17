@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.views.generic import ListView, TemplateView
 
 from .forms import JukugoForm, LevelChoiceForm
-from .jukugo.main import first, next, set_player_state
+from .jukugo.main import first, step, write
 from .jukugo.questions.state import State
 from .models import Computer, Play, Player
 
@@ -102,18 +102,14 @@ class GamePlayView(TemplateView):
     context_object_name: str = "play"
     model: Play = Play
 
-    def is_bad_jukugo(self, jukugo: str) -> bool:
-        # ルールに則ってない熟語ならTrue
-        return False
-
-    def declare_lose(self, request: HttpRequest) -> bool:
-        # 負け宣言したらTrue
-        return False
-
-    def is_finished(self, request: HttpRequest, jukugo: str) -> bool:
-        vj: bool = self.is_bad_jukugo(jukugo)
-        dl: bool = self.declare_lose(request)
-        return vj | dl
+    players: Dict[str, _M] = {
+        "player": Player,
+        "computer": Computer
+    }
+    name_map: Dict[str, str] = {
+        "player": "user",
+        "computer": "cpu"
+    }
 
     @property
     def account(self) -> _O:
@@ -140,29 +136,21 @@ class GamePlayView(TemplateView):
         game: _P = self.current_game
 
         # playerを更新
-        submitted_jukugo: str = request.POST.get("jukugo")
-        player_state: State = set_player_state(submitted_jukugo)
-        state: bool = self.is_finished(request, submitted_jukugo)
+        given_jukugo: str = request.POST.get("jukugo")
+        cpu_level: str = self.kwargs["level"]
+        state: State
 
-        player_state.obs.update(is_done=(state | player_state.done))
-        player: _P = Player(**player_state.obs)
-        player.save()
-
-        game.increment(user=player, **player_state.obs)
-
-        if game.is_done:
-            return True
-
-        # computerを更新
-        next_state: State = next(cpu_level=self.kwargs["level"], state=player_state)
-        next_state.obs.update(is_done=next_state.done)
-        computer: _C = Computer(**next_state.obs)
-        computer.save()
-
-        game.increment(cpu=computer, **next_state.obs)
-
-        if game.is_done:
-            return True
+        for name in ["player", "computer"]:
+            if "computer" in name:
+                state = step(name, cpu_level)
+                given_jukugo = state.obs["jukugo"]
+            state = write(given_jukugo, name, cpu_level)
+            player = self.players[name](is_done=state.done, **state.obs)
+            player.save()
+            game.increment(**{self.name_map[name]: player}, **state.obs)
+            given_jukugo = state.obs["jukugo"]
+            if game.is_done:
+                return True
 
         return False
 

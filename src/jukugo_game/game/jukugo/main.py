@@ -7,10 +7,11 @@ from game.jukugo.questions.state import State
 
 _A = TypeVar("_A", bound=AbstractPlayer)
 
-JUKUGO_LIST: Dict[str, Any] = JukugoList().level["kanjipedia"]
-MASTER: _A = GameMaster(JUKUGO_LIST, player_id=0, name="master")
+ALL_JUKUGO: Dict[str, Any] = JukugoList().level["kanjipedia"]
+MASTER: _A = GameMaster(ALL_JUKUGO, player_id=0, name="master")
+PLAYER: _A = GameMaster(ALL_JUKUGO, player_id=1, name="player")
 DIFFICULTIES: Dict[str, tmp] = tmp.\
-    create_all_computers(JUKUGO_LIST, player_id=0, name="computer")
+    create_all_computers(ALL_JUKUGO, player_id=0, name="computer")
 
 
 def set_id(first: str = "computer", cpu_level: str = "normal") -> None:
@@ -45,37 +46,71 @@ def get_players(cpu_level: str = "normal") -> Dict[str, _A]:
     """
     return {
         "master": MASTER,
+        "player": PLAYER,
         "computer": DIFFICULTIES[cpu_level]
     }
 
 
-def step_players(
-    cpu_levels: str = "normal",
+def reset_dict(cpu_level: str = "normal", jukugo: Optional[str] = None) -> None:
+    players: Dict[str, _A] = get_players(cpu_level)
+    for ap in players.values():
+        ap.reset()
+
+
+def update_dict(
+    cpu_level: str = "normal",
     jukugo: Optional[str] = None,
-    on_first: bool = False
 ) -> None:
     """
     It takes a string of CPU levels, a jukugo, and a boolean, and it steps the players
 
     Args:
-      cpu_levels (str): str = "normal". Defaults to normal
-      jukugo (Optional[str]): The jukugo to be used for the level increase. If None, a random jukugo
-    will be used.
+      cpu_level (str): str = "normal". Defaults to normal
+      jukugo (Optional[str]): The jukugo to be used for the level increase.
+      If None, a random jukugo will be used.
       on_first (bool): If True, the player's level will be reset to 1. Defaults to False
     """
-    players: Dict[str, _A] = get_players(cpu_levels)
+    players: Dict[str, _A] = get_players(cpu_level)
     for ap in players.values():
-        if on_first:
-            ap.reset()
         ap.level.increase(jukugo)
 
 
-def set_player_state(jukugo: Optional[str] = None) -> State:
-    if jukugo is None:
+def reflect_state(state: State, player_name: str = "computer", cpu_level: str = "normal") -> None:
+    players: Dict[str, _A] = get_players(cpu_level)
+    k: str
+    v: _A
+
+    for k, v in players.items():
+        if k == player_name:
+            continue
+        v.env.set_previous_state(state)
+
+
+def write(jukugo: str,
+          player_name: str = "computer",
+          cpu_level: str = "normal"
+          ) -> State:
+    if not isinstance(jukugo, str):
         raise ValueError()
-    MASTER.env._set_new_state(jukugo)
-    MASTER.level.increase(jukugo)
-    return MASTER.env.state
+
+    player: _A = get_players(cpu_level=cpu_level)[player_name]
+    # stateを作っただけで更新はしてない
+    player.env.set_new_observation(jukugo=jukugo)
+    state: State = player.env.state
+    # 辞書更新は全体
+    update_dict(cpu_level, state)
+    reflect_state(state, player_name, cpu_level)
+    player.env.set_new_state_without_obs()
+    return player.env.state
+
+
+def step(player_name: str = "computer", cpu_level: str = "normal") -> State:
+    player: _A = get_players(cpu_level=cpu_level)[player_name]
+
+    # 観測更新は対象プレイヤーのみ/checkerの順で更新する
+    player.env._step()
+
+    return player.env.state
 
 
 # computerでもplayerでもリセットして初期熟語を与える
@@ -102,22 +137,11 @@ def first(
     # TODO idのセットが一回で全てに適用されるのか気になる
     set_id(first=first, cpu_level=cpu_level)
     player: _A = players[first]
-    player.env.reset(jukugo)
-    step_players(cpu_level, player.env.state.obs["jukugo"], on_first=True)
+    reset_dict(cpu_level, jukugo)
+    # リセット後の状態を使う
+    state: State = player.env.state
+    update_dict(cpu_level, state.obs["jukugo"])
+    reflect_state(state, first, cpu_level)
+    player.env.set_new_state_without_obs()
 
     return player.env.state
-
-
-# playerは熟語を入力するのでincreaseのみ、computerの熟語を返す
-# TODO nextはgame:playで使う
-def next(cpu_level: str = "normal", state: Optional[State] = None) -> State:
-    if state is None:
-        return None
-
-    # step env (give jukugo) -> set states -> increase level
-    computer: tmp = DIFFICULTIES[cpu_level]
-    # step env -> set states -> increase level
-    computer.env._step(state.obs)
-    step_players(cpu_level, computer.env.state.obs["jukugo"])
-
-    return computer.env.state
