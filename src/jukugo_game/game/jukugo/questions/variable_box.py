@@ -9,13 +9,14 @@ class VariablesBox:
         self,
         variables: List[_L],
         box_id: _L = 0,
-        players: List[str] = [],
+        name: Optional[str] = None
     ) -> None:
         self.variables: List[_L] = variables
         self.box_id: _L = box_id
         self.used_ids: List[int] = []
         self.max_ids: int = len(variables)
-        self.players: Dict[str, List[int]] = {}
+        self.name: str = name
+        self.players: Dict[str, List[int]] = {name: self.variables}
 
     def __setitem__(self, key: str, val: List[int]) -> None:
         self.players[key] = val
