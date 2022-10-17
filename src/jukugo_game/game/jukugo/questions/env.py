@@ -1,11 +1,14 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypeVar, Union
 
 import numpy as np
 import yaml
+from game.jukugo.game.checker import AbstractCheckType, JukugoCheckerPipeline
 from game.jukugo.utils.logger import GameLogger
 
 from .state import State
 from .variable_box import VariablesBox
+
+_C = TypeVar("_C", bound=AbstractCheckType)
 
 
 class Env:
@@ -25,15 +28,24 @@ class JukugoRelayEnv(Env):
         jukugo_list: List[str] = [],
         user_id: int = 0,
         user_name: Optional[str] = None,
+        checkers: List[_C] = []
     ) -> None:
         super().__init__()
         self.jukugo_box: VariablesBox
         if isinstance(jukugo_list, VariablesBox):
             self.jukugo_box = jukugo_list
         else:
-            self.jukugo_box = VariablesBox(jukugo_list, box_id=user_name)
+            self.jukugo_box = VariablesBox(jukugo_list, box_id=user_name, name=user_name)
         self.user_id: int = user_id
         self.user_name: Optional[str] = user_name
+        self.checker: JukugoCheckerPipeline = JukugoCheckerPipeline(
+            checkers=checkers,
+            level=self.jukugo_box,
+            player_id=self.user_id,
+            assert_type="error",
+            valid_method="union"
+        )
+        self.previous_state: State = State()
 
     def _get_unused_jukugo(self) -> List[Union[int, str]]:
         return self.jukugo_box.get_named_unused_vars(self.user_name)
@@ -59,38 +71,62 @@ class JukugoRelayEnv(Env):
 
     def _get_new_jukugo(self, pre_jukugo: Optional[str] = None) -> Optional[str]:
         unused_jukugo: List[str] = self._get_available_jukugo(pre_jukugo)
+        jukugo: str
         if len(unused_jukugo) > 0:
             jukugo = np.random.choice(unused_jukugo)
         else:
             jukugo = None
         return jukugo
 
-    def _set_new_state(self, jukugo: str) -> None:
-        judge: bool = self.jukugo_box.is_still_unused(jukugo)
-
+    def set_new_observation(self,
+                            jukugo: str,
+                            jukugo_id: Optional[int] = None,
+                            yomi: Optional[str] = None
+                            ) -> None:
         # 観測更新
         # TODO variable_boxにTuple[jukugo, jukugo_id, yomi]を与えて絞り出す
         self.state.set_obs({
             "jukugo": jukugo,
-            "jukugo_id": None,
-            "yomi": None
+            "jukugo_id": jukugo_id,
+            "yomi": yomi
         })
+        if self.previous_state.obs.get("jukugo", None) is not None:
+            self.checker(cpu_state=self.previous_state, user_state=self.state)
 
-        # 終端、報酬更新
-        if jukugo is None:
-            self.state.set_done(True)
-            self.state.reward -= 1.0
-
-        if not judge:
-            self.state.reward -= 1.0
-
-        # 情報更新
+    def set_new_info(self, info: Dict[str, Any] = {}) -> None:
         unused: List[str] = self.jukugo_box.get_named_unused_vars(self.user_name)
-        self.state.set_info({"unused_jukugo": unused, "is_in": judge})
+        info.update(
+            unused_jukugo=unused,
+            valid_info=self.checker.valid_info
+        )
+        self.state.set_info(info)
+
+    def set_new_done(self, is_done: bool = False) -> None:
+        is_done |= self.checker.is_not_valid
+        self.state.set_done(is_done)
+
+    # 相手がnot validな熟語を渡してきたとき+1
+    # set_new_infoの後
+    def set_new_reward(self) -> None:
+        if self.previous_state.done:
+            self.state.reward += 1
+        if self.state.done:
+            self.state.reward -= 1
+
+    def set_new_state_without_obs(self) -> None:
+        self.set_new_info()
+        self.set_new_done()
+        self.set_new_reward()
+
+    def set_new_state(self, new_state: State) -> None:
+        self.state = new_state
+        self.checker(cpu_state=self.previous_state, user_state=self.state)
 
     def reset(self, jukugos: Optional[Union[str, List[str]]] = None) -> Dict[str, str]:
         self.jukugo_box.reset()
         self.state.reset_std()
+        self.previous_state.reset_std()
+        self.checker.reset()
 
         # 初期状態の更新
         if isinstance(jukugos, str):
@@ -99,26 +135,34 @@ class JukugoRelayEnv(Env):
             self.jukugo_box.increase_seq(jukugos)
 
         jukugo = self._get_new_jukugo()
-        self._set_new_state(jukugo)
+        self.set_new_observation(jukugo=jukugo)
+        self.set_new_state_without_obs()
         return self.state
 
-    def _step(self, obs: Dict[str, str]) -> State:
+    def _step(self) -> str:
         # 受け取った熟語を使用済に
-        old_jukugo: Optional[str] = obs.get("jukugo")
-        self.jukugo_box.increase(old_jukugo)
+        previous_jukugo: Optional[str] = self.previous_state.obs.get("jukugo")
 
         # 提出する熟語を使用済に
-        new_jukugo: Optional[str] = self._get_new_jukugo(old_jukugo)
-        self._set_new_state(new_jukugo)
+        current_jukugo: Optional[str] = self._get_new_jukugo(previous_jukugo)
+        self.set_new_observation(jukugo=current_jukugo)
 
-        return new_jukugo
+        return current_jukugo
 
-    def step(self, obs: Dict[str, str]) -> State:
-        new_jukugo: str = self._step(obs)
+    def step_observation(self, state: State) -> str:
+        self.set_previous_state(state)
+        return self._step()
+
+    def set_previous_state(self, state: State) -> None:
+        self.previous_state = state
+
+    def step(self, state: State) -> State:
+        self.jukugo_box.increase(state.obs["jukugo"])
+        new_jukugo: str = self.step_observation(state)
 
         if new_jukugo is not None:
             self.jukugo_box.increase(new_jukugo)
-
+        self.set_new_state_without_obs()
         return self.state
 
 
