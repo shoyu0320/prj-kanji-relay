@@ -2,7 +2,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
 from game.jukugo.questions.state import State
 from game.jukugo.questions.variable_box import VariablesBox
-from typing_extensions import assert_type
 
 _C = TypeVar("_C", bound="AbstractCheckType")
 
@@ -34,7 +33,7 @@ class AbstractCheckType:
         raise NotImplementedError()
 
     def _raise(self, comment: str) -> None:
-        if assert_type == "error":
+        if self.ssert_type == "error":
             self.raise_type(comment)
 
     def get_info(self, *args) -> Tuple[Any, ...]:

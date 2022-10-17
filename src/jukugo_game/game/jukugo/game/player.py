@@ -142,7 +142,7 @@ class InputPlayer(AbstractPlayer):
         used: bool = True
         while used:
             user_state = input()
-            used = not self.level.is_still_unused(self_user_statestate)
+            used = not self.level.is_still_unused(user_state)
 
             # State更新
             self.env._set_new_state(user_state)
