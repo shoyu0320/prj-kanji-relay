@@ -129,11 +129,11 @@ class GamePlayView(TemplateView):
 
     @property
     def current_answerer_is_player(self) -> bool:
-        game: _P = self.current_game
-        return game.answerer
+        game: Play = self.current_game
+        return not game.answerer
 
     def step_game(self, request: HttpRequest, form: JukugoForm) -> bool:
-        game: _P = self.current_game
+        game: Play = self.current_game
 
         # playerを更新
         given_jukugo: str = request.POST.get("jukugo")
@@ -156,9 +156,8 @@ class GamePlayView(TemplateView):
 
     def _get_attrs(self) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {"pk": self.request.user.pk}
-        # TODO 便宜上最後のユーザーを取り出してるけど、セキュアにはIDで取り出すのが良さそう(OBJECT.get(id=specified_id))
-        last_obj: Optional[_O] = Computer.objects.last()
-        level: str = last_obj.level
+        last_cpu: Computer = self.current_game.cpu
+        level: str = last_cpu.level
         if level is not None:
             kwargs.update(level=level)
         return kwargs
@@ -215,9 +214,9 @@ class GamePlayView(TemplateView):
 
     def _get_last_jukugo(self) -> str:
         # 直前の相手の熟語を取得する
-        game: _O = self.current_game
+        game: Play = self.current_game
         if game is not None:
-            last: Optional[_O] = game.jukugo
+            last: Optional[str] = game.jukugo
             return last
         else:
             return "熟語"
