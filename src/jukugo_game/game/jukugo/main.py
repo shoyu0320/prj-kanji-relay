@@ -90,27 +90,26 @@ def reflect_state(
         v.env.set_previous_state(state)
 
 
+def get_updated_state(player: _A, player_name: str = "computer", cpu_level: str = "normal", has_jukugo: bool = True) -> State:
+    state: State = player.env.state
+    if has_jukugo:
+        # 辞書更新は全体
+        update_dict(cpu_level, state)
+        reflect_state(state, player_name, cpu_level)
+    player.env.set_new_state_without_obs()
+    return player.env.state
+
+
 def write(jukugo: str,
           player_name: str = "computer",
           cpu_level: str = "normal"
           ) -> State:
-    if not isinstance(jukugo, str):
-        raise ValueError(
-            "In case that jukugo for a player has NoneType, "
-            "the player is supposed to get is-done signal "
-            "and an iteration of exchanging states get a break signal. "
-            "It's wrong for entering write function with having NoneType jukugo."
-            )
-
     player: _A = get_players(cpu_level=cpu_level)[player_name]
     # stateを作っただけで更新はしてない
     player.env.set_new_observation(jukugo=jukugo)
-    state: State = player.env.state
-    # 辞書更新は全体
-    update_dict(cpu_level, state)
-    reflect_state(state, player_name, cpu_level)
-    player.env.set_new_state_without_obs()
-    return player.env.state
+    has_jukugo: bool = jukugo is not None
+
+    return get_updated_state(player, player_name, cpu_level, has_jukugo)
 
 
 def step(player_name: str = "computer", cpu_level: str = "normal") -> State:

@@ -17,6 +17,7 @@ class VariablesBox:
         self.max_ids: int = len(variables)
         self.name: str = name
         self.players: Dict[str, List[int]] = {name: self.variables}
+        self.initial_prohibited_words: List[int] = []
 
     def __setitem__(self, key: str, val: List[int]) -> None:
         self.players[key] = val
@@ -40,7 +41,7 @@ class VariablesBox:
 
     # TODO プレイヤーごとのフルセットを作成する
     def reset(self):
-        self.used_ids = []
+        self.used_ids = self.initial_prohibited_words
 
     @property
     def full_set(self) -> FrozenSet[int]:
@@ -68,6 +69,7 @@ class VariablesBox:
 
     def set_available_list(self, available_samples: List[int]) -> None:
         unavailable_samples: FrozenSet[int] = self.full_set - set(available_samples)
+        self.initial_prohibited_words += list(unavailable_samples)
         self.add(list(unavailable_samples))
 
     def add(self, used_ids: List[int]) -> None:

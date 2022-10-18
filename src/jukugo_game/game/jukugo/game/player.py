@@ -118,14 +118,19 @@ class LevelChangeableESPlayer(EnvStepPlayer):
         player_id: int = 0,
         name: str = "computer"
     ) -> Dict[str, _C]:
-        return {
-            d: cls(
-                jukugo_list,
+        cpu_list: Dict[str, _C] = {}
+        cpu: _C
+        diff: str
+        for diff in cls.difficulties.keys():
+            cpu = cls(
+                level=jukugo_list,
                 player_id=player_id,
                 name=name,
-                difficulty=d
-            ) for d in cls.difficulties.keys()
-        }
+                difficulty=diff
+                )
+            cpu_list[diff] = cpu
+            print(diff, len(cpu.level.unused_set))
+        return cpu_list
 
 
 class InputPlayer(AbstractPlayer):
