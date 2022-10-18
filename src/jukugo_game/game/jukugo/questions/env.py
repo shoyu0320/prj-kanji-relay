@@ -147,7 +147,6 @@ class JukugoRelayEnv(Env):
 
         # 提出する熟語を使用済に
         current_jukugo: Optional[str] = self._get_new_jukugo(previous_jukugo)
-        self.set_new_observation(jukugo=current_jukugo)
 
         return current_jukugo
 
