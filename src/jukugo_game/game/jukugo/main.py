@@ -75,11 +75,10 @@ def update_dict(
         ap.level.increase(jukugo)
 
 
-def reflect_state(
-    state: State,
-    player_name: str = "computer",
-    cpu_level: str = "normal"
-    ) -> None:
+def reflect_state(state: State,
+                  player_name: str = "computer",
+                  cpu_level: str = "normal"
+                  ) -> None:
     players: Dict[str, _A] = get_players(cpu_level)
     k: str
     v: _A
@@ -90,7 +89,11 @@ def reflect_state(
         v.env.set_previous_state(state)
 
 
-def get_updated_state(player: _A, player_name: str = "computer", cpu_level: str = "normal", has_jukugo: bool = True) -> State:
+def get_updated_state(player: _A,
+                      player_name: str = "computer",
+                      cpu_level: str = "normal",
+                      has_jukugo: bool = True
+                      ) -> State:
     state: State = player.env.state
     if has_jukugo:
         # 辞書更新は全体
