@@ -113,9 +113,9 @@ def step(player_name: str = "computer", cpu_level: str = "normal") -> State:
     player: _A = get_players(cpu_level=cpu_level)[player_name]
 
     # 観測更新は対象プレイヤーのみ/checkerの順で更新する
-    player.env._step()
+    new_jukugo: str = player.env._step()
 
-    return player.env.state
+    return new_jukugo
 
 
 # computerでもplayerでもリセットして初期熟語を与える
