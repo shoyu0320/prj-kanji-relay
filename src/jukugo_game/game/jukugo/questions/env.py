@@ -114,8 +114,10 @@ class JukugoRelayEnv(Env):
             self.state.reward -= 1
 
     def set_new_state_without_obs(self) -> None:
-        self.set_new_info()
         self.set_new_done()
+        # Setting 'info' method is must be after setting 'done',
+        # because of using the latest 'done' state.
+        self.set_new_info()
         self.set_new_reward()
 
     def set_new_state(self, new_state: State) -> None:
