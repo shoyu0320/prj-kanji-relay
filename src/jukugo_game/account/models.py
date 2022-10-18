@@ -1,4 +1,5 @@
 import uuid
+
 from django.contrib.auth.models import User
 from django.db import models
 from game.models import Computer, Play, Player
@@ -29,3 +30,5 @@ class SpecialUser(User):
         elif player.is_done:
             self.num_win += 1
         self.num_play += 1
+
+        self.save()
