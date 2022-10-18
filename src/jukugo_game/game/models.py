@@ -129,10 +129,17 @@ class Play(models.Model):
 
     objects: _O = GameManager()
 
+    def get_is_done_from_player(self, **kwargs) -> None:
+        player: Optional[_M] = kwargs.get("user", None) or kwargs.get("cpu", None)
+        for name in ["user", "cpu"]:
+            player = player or kwargs.get(name)
+        return player.is_done
+
     def increment(self, **kwargs) -> None:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+        self.is_done = self.get_is_done_from_player(**kwargs)
         self.num_rally += 1
         self.answerer = not self.answerer
         self.save()
