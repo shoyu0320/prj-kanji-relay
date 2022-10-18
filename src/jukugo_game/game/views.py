@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional, Tuple, TypeVar
 
 from account.models import SpecialUser
-from django.db import models
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -143,6 +142,7 @@ class GamePlayView(TemplateView):
             state = write(given_jukugo, name, cpu_level)
             player: _A = self.players[name](is_done=state.done, **state.obs)
             player.save()
+            print(name, len(state.info["unused_jukugo"]))
             game.increment(**{self.name_map[name]: player}, **state.obs)
             given_jukugo = state.obs["jukugo"]
             if game.is_done:
