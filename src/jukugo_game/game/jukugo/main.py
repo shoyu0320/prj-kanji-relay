@@ -91,7 +91,12 @@ def write(jukugo: str,
           cpu_level: str = "normal"
           ) -> State:
     if not isinstance(jukugo, str):
-        raise ValueError()
+        raise ValueError(
+            "In case that jukugo for a player has NoneType, "
+            "the player is supposed to get is-done signal "
+            "and an iteration of exchanging states get a break signal. "
+            "It's wrong for entering write function with having NoneType jukugo."
+            )
 
     player: _A = get_players(cpu_level=cpu_level)[player_name]
     # stateを作っただけで更新はしてない
