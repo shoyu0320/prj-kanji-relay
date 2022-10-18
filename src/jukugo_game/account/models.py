@@ -4,7 +4,7 @@ from typing import Any, Dict, List, TypeVar
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.models import User
 from django.db import models
-from game.models import Play
+from game.models import Computer, Play, Player
 
 _Q = TypeVar("_Q", bound=models.QuerySet)
 
@@ -106,3 +106,13 @@ class SpecialUser(User):
         db_table: str = "account"
 
     objects = SuperUserManager()
+
+    def increment(self, play: Play) -> None:
+        cpu: Computer = play.cpu
+        player: Player = play.user
+
+        if cpu.is_done:
+            self.num_lose += 1
+        elif player.is_done:
+            self.num_win += 1
+        self.num_play += 1
