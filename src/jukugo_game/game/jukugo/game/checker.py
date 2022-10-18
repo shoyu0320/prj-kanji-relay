@@ -227,6 +227,20 @@ class CheckerPipelineBase:
             valid = check_method(valid, checker)
         return valid
 
+    @property
+    def comments(self) -> List[str]:
+        info: Tuple[str, bool, str]
+        is_not_valid: bool
+        txt: str
+
+        error_text: List[str] = []
+        for info in self.valid_info:
+            is_not_valid, txt = info[1:]
+            if is_not_valid:
+                error_text.append(txt)
+
+        return error_text
+
     def set_additional_properties(self, **kwargs) -> None:
         self.additional_props.update(**kwargs)
 
@@ -239,11 +253,10 @@ class CheckerPipelineBase:
     def reset(self) -> None:
         for c in self._c:
             c.reset()
-        self.additional_props = {}
         self.valid_info = []
 
     def __call__(self, *args, **kwargs) -> None:
-        # self.reset()
+        self.reset()
         prop: Dict[str, Any] = self.properties
         for checker in self._c:
             checker(**prop)
