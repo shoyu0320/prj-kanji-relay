@@ -11,12 +11,9 @@ from django.views.generic import ListView, TemplateView
 from .forms import JukugoForm, LevelChoiceForm
 from .jukugo.main import first, step, write
 from .jukugo.questions.state import State
-from .models import Computer, Play, Player
+from .models import AbstractGamePlayer, Computer, Play, Player
 
-_M = TypeVar("_M", bound=models.Model)
-_O = TypeVar("_O", bound=models.Manager)
-_P = TypeVar("_P", bound=Player)
-_C = TypeVar("_C", bound=Computer)
+_A = TypeVar("_A", bound=AbstractGamePlayer)
 
 
 class GameStartView(TemplateView):
@@ -25,13 +22,13 @@ class GameStartView(TemplateView):
     model = Play
 
     @property
-    def account(self) -> _O:
+    def account(self) -> SpecialUser:
         pk: int = self.kwargs["pk"]
         return SpecialUser.objects.get(pk=pk)
 
     @property
-    def current_game(self) -> Optional[_O]:
-        account: _O = self.account
+    def current_game(self) -> Optional[Play]:
+        account: SpecialUser = self.account
         return account.play.last()
 
     def _get_url(self, kwargs: Dict[str, Any]) -> str:
@@ -46,7 +43,7 @@ class GameStartView(TemplateView):
     def _get_attrs(self) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {"pk": self.request.user.pk}
         # TODO 便宜上最後のユーザーを取り出してるけど、セキュアにはIDで取り出すのが良さそう(OBJECT.get(id=specified_id))
-        last_obj: Optional[_O] = Computer.objects.last()
+        last_obj: Optional[Computer] = Computer.objects.last()
         level: str = last_obj.level
         if level is not None:
             kwargs.update(level=level)
@@ -72,9 +69,9 @@ class GameStartView(TemplateView):
         level: str = form.get_name(selected_level)
         # form経由でなく、modelから直接セーブする方が好き
         start_state: State = first(first="computer", cpu_level=level, jukugo=None)
-        game: _M = Play.\
+        game: Play = Play.\
             create_game(cpu_level=level, start_jukugo=start_state.obs["jukugo"])
-        account: _O = self.account
+        account: SpecialUser = self.account
         account.play.add(game)
 
     def redirect(self) -> HttpResponseRedirect:
@@ -102,7 +99,7 @@ class GamePlayView(TemplateView):
     context_object_name: str = "play"
     model: Play = Play
 
-    players: Dict[str, _M] = {
+    players: Dict[str, _A] = {
         "player": Player,
         "computer": Computer
     }
@@ -144,7 +141,7 @@ class GamePlayView(TemplateView):
             if "computer" in name:
                 given_jukugo = step(name, cpu_level)
             state = write(given_jukugo, name, cpu_level)
-            player: _M = self.players[name](is_done=state.done, **state.obs)
+            player: _A = self.players[name](is_done=state.done, **state.obs)
             player.save()
             game.increment(**{self.name_map[name]: player}, **state.obs)
             given_jukugo = state.obs["jukugo"]

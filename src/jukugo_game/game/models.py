@@ -1,19 +1,17 @@
 import uuid
 from typing import Optional, TypeVar
-from uuid import UUID
 
 from django.db import models
 
 _M = TypeVar("_M", bound=models.Model)
-_O = TypeVar("_O", bound=models.Manager)
 _F = TypeVar("_F", bound=models.Field)
-_Q = TypeVar("_Q", bound=models.QuerySet)
 _P = TypeVar("_P", bound="Play")
+_A = TypeVar("_A", bound="AbstractGamePlayer")
 
 
 # makemigrations, migrate はいらないものが入らないように、migrations内を消しつつ進めること
 # こいつがデータベースの中身を決める
-class Computer(models.Model):
+class AbstractGamePlayer(models.Model):
     jukugo: _F = models.CharField(
         verbose_name="熟語", default=None, null=True, max_length=10
     )
@@ -25,6 +23,15 @@ class Computer(models.Model):
     )
     # 継続状態:False/負け状態:True(次の熟語が出てこない;None)/その他:Null
     is_done: _F = models.BooleanField(verbose_name="勝ち負け", null=True, max_length=10)
+
+    @classmethod
+
+    def create_player(cls, *args, **kwargs) -> _A:
+        player: _A = cls(**kwargs)
+        player.save()
+
+
+class Computer(AbstractGamePlayer):
     # 相手の難易度もついでに書いとく
     level: _F = models.CharField(
         verbose_name="難易度", default="normal", null=True, max_length=10
@@ -34,48 +41,10 @@ class Computer(models.Model):
         db_table: str = "play_cpu"
 
 
-class Player(models.Model):
-    jukugo: _F = models.CharField(
-        verbose_name="熟語", default=None, null=True, max_length=10
-    )
-    jukugo_id: _F = models.IntegerField(
-        verbose_name="熟語ID", default=None, null=True
-    )
-    yomi: _F = models.CharField(
-        verbose_name="読み", default=None, null=True, max_length=20
-    )
-    # 継続状態:False/負け状態:True(次の熟語が出てこないなど;None)/その他:Null
-    is_done: _F = models.BooleanField(verbose_name="勝ち負け", null=True)
+class Player(AbstractGamePlayer):
 
     class Meta:
         db_table = "play_user"
-
-
-class GameQuerySet(models.QuerySet):
-    def filter_game_id(self, game_id: int) -> _Q:
-        return self.filter(game_id=game_id)
-
-
-class GameManager(models.Manager.from_queryset(GameQuerySet)):
-    def increment(self, game_id: UUID, jukugo: str, state: bool) -> None:
-        obj = self.filter_game_id(game_id=game_id)
-        _ans: bool = self._change_answerer(obj)
-        _num: int = self._increase_rally(obj)
-        _stt: bool = self._judge_state(obj, state)
-        _jkg: str = jukugo
-        self.update(answerer=_ans, jukugo=_jkg, num_rally=_num, state=_stt)
-
-    def _change_answerer(self, obj: _O) -> None:
-        _ans: bool = obj.answerer
-        return not _ans
-
-    def _increase_rally(self, obj: _O) -> int:
-        _num: int = obj.num_rally
-        return _num + 1
-
-    def _judge_state(self, obj: _O, declare: bool) -> bool:
-        state: bool = obj.state
-        return state | declare
 
 
 class Play(models.Model):
@@ -88,9 +57,9 @@ class Play(models.Model):
         cpu_level: str = "normal",
         start_jukugo: Optional[str] = None
     ) -> _P:
-        player: _M = Player()
-        computer: _M = Computer(jukugo=start_jukugo, level=cpu_level)
-        game: _M = cls(cpu=computer, user=player, jukugo=start_jukugo)
+        player: _A = Player()
+        computer: _A = Computer(jukugo=start_jukugo, level=cpu_level)
+        game: _P = cls(cpu=computer, user=player, jukugo=start_jukugo)
         _: _M
         for _ in [player, computer, game]:
             _.save()
@@ -127,10 +96,8 @@ class Play(models.Model):
     class Meta:
         db_table: str = "play"
 
-    objects: _O = GameManager()
-
     def get_is_done_from_player(self, **kwargs) -> None:
-        player: Optional[_M] = kwargs.get("user", None) or kwargs.get("cpu", None)
+        player: Optional[_A] = kwargs.get("user", None) or kwargs.get("cpu", None)
         for name in ["user", "cpu"]:
             player = player or kwargs.get(name)
         return player.is_done
