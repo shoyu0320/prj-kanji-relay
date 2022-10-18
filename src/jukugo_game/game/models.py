@@ -24,10 +24,12 @@ class AbstractGamePlayer(models.Model):
     # 継続状態:False/負け状態:True(次の熟語が出てこない;None)/その他:Null
     is_done: _F = models.BooleanField(verbose_name="勝ち負け", null=True, max_length=10)
 
-    @classmethod
+    class Meta:
+        abstract = True
 
+    @classmethod
     def create_player(cls, *args, **kwargs) -> _A:
-        player: _A = cls(**kwargs)
+        player: _A = cls(*args, **kwargs)
         player.save()
 
 
