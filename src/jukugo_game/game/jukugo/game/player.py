@@ -147,8 +147,8 @@ class InputPlayer(AbstractPlayer):
 
 
 class GameMaster(AbstractPlayer):
-    def input_name(self, name: str):
-        return "GameMaster"
+    def input_name(self, name: Optional[str] = None):
+        return name or "GameMaster"
 
     def first(self, mode: str = "input",) -> State:
         state: State
