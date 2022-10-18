@@ -112,19 +112,19 @@ class GamePlayView(TemplateView):
     }
 
     @property
-    def account(self) -> _O:
+    def account(self) -> SpecialUser:
         pk: str = self.kwargs["pk"]
-        account: _O = SpecialUser.objects.get(pk=pk)
+        account: SpecialUser = SpecialUser.objects.get(pk=pk)
         return account
 
     @property
-    def current_game(self) -> Optional[_O]:
-        account: _O = self.account
+    def current_game(self) -> Optional[Play]:
+        account: SpecialUser = self.account
         return account.play.last()
 
     @property
     def num_rally(self) -> int:
-        game: _P = self.current_game
+        game: Play = self.current_game
         return int(game.num_rally)
 
     @property
@@ -142,10 +142,9 @@ class GamePlayView(TemplateView):
 
         for name in ["player", "computer"]:
             if "computer" in name:
-                state = step(name, cpu_level)
-                given_jukugo = state.obs["jukugo"]
+                given_jukugo = step(name, cpu_level)
             state = write(given_jukugo, name, cpu_level)
-            player = self.players[name](is_done=state.done, **state.obs)
+            player: _M = self.players[name](is_done=state.done, **state.obs)
             player.save()
             game.increment(**{self.name_map[name]: player}, **state.obs)
             given_jukugo = state.obs["jukugo"]
