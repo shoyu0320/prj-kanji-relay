@@ -172,7 +172,13 @@ class GamePlayView(TemplateView):
         url: str = self.get_end_url()
         return reverse(url, kwargs=kwargs)
 
+    def _step_account(self) -> None:
+        account: SpecialUser = self.account
+        game: Play = self.current_game
+        account.increment(game)
+
     def get_end_url(self) -> str:
+        self._step_account()
         if self.current_answerer_is_player:
             return "game:win"
         else:
