@@ -69,10 +69,12 @@ class DefinedJukugoChecker(AbstractCheckType):
     def validate(self, *args, **kwargs) -> bool:
         _dict: VariablesBox = kwargs["level"]
         jukugo: str = self.get_jukugo(**kwargs)
-        return not _dict.is_still_unused(jukugo)
+        return not _dict.include(jukugo)
 
     def create_comment(self, *args, **kwargs) -> str:
         jukugo: str = self.get_jukugo(**kwargs)
+        if jukugo is None:
+            return "Cannot find proper jukugo."
         return self.comment_tmp.format(jukugo)
 
 
@@ -88,10 +90,12 @@ class UnusedJukugoChecker(AbstractCheckType):
     def validate(self, *args, **kwargs) -> bool:
         _dict: VariablesBox = kwargs["level"]
         jukugo: str = self.get_jukugo(**kwargs)
-        return not (jukugo in _dict.unused_vars)
+        return (jukugo not in _dict.unused_vars) and _dict.include(jukugo)
 
     def create_comment(self, *args, **kwargs) -> str:
         jukugo: str = self.get_jukugo(**kwargs)
+        if jukugo is None:
+            return "Cannot find proper jukugo."
         return self.comment_tmp.format(jukugo)
 
 
@@ -250,7 +254,7 @@ class CheckerPipelineBase:
             if is_not_valid:
                 error_text.append(txt)
 
-        return error_text
+        return list(set(error_text))
 
     def set_additional_properties(self, **kwargs) -> None:
         self.additional_props.update(**kwargs)

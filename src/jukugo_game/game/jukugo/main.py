@@ -54,6 +54,11 @@ def get_unused_jukugo(
     last_jukugo: Optional[str] = None,
 ) -> List[str]:
     player: _A = get_players(cpu_level)[player]
+    unused_jukugo: List[str] = player.env._get_unused_jukugo()
+    unused_jukugo = player.env._get_partial_match_jukugo(unused_jukugo, last_jukugo)
+    return unused_jukugo
+
+
 def get_comment(
     player: str = "computer",
     cpu_level: str = "normal",

@@ -14,7 +14,7 @@ class VariablesBox:
         self.used_ids: List[int] = []
         self.max_ids: int = len(variables)
         self.name: str = name
-        self.players: Dict[str, List[int]] = {name: self.variables}
+        self.players: Dict[str, List[int]] = {name: self.full_set}
         self.initial_prohibited_words: List[int] = []
 
     def __setitem__(self, key: str, val: List[int]) -> None:
@@ -25,17 +25,20 @@ class VariablesBox:
             return self.full_set
         return set(self.players[key])
 
-    def get_named_unused_set(self, key: str) -> List[int]:
+    def get_named_unused_set(self, key: Optional[str] = None) -> List[int]:
         used_ids: FrozenSet[int] = set(self.used_ids)
         return list(self[key] - used_ids)
 
-    def get_named_unused_vars(self, key: str) -> List[str]:
+    def get_named_unused_vars(self, key: Optional[str] = None) -> List[str]:
         output: List[_L] = []
         us: int
-        available_set: List[str] = self.get_named_unused_set(key)
+        available_set: List[int] = self.get_named_unused_set(key)
         for us in available_set:
             output += [self.variables[us]]
         return output
+
+    def include(self, val: _L, key: Optional[str] = None) -> bool:
+        return val in self.get_named_unused_vars(key)
 
     # TODO プレイヤーごとのフルセットを作成する
     def reset(self):
