@@ -7,10 +7,7 @@ _L = TypeVar("_L", bound=Union[int, str])
 
 class VariablesBox:
     def __init__(
-        self,
-        variables: List[_L],
-        box_id: _L = 0,
-        name: Optional[str] = None
+        self, variables: List[_L], box_id: _L = 0, name: Optional[str] = None
     ) -> None:
         self.variables: List[_L] = variables
         self.box_id: _L = box_id
@@ -80,6 +77,9 @@ class VariablesBox:
     def add2used(self, used_id: int) -> None:
         self.used_ids.append(used_id)
 
+    def remove_from_used(self, used_id: int) -> None:
+        self.used_ids.remove(used_id)
+
     def push(self, val: _L) -> None:
         self.variables += [val]
         self.max_ids += 1
@@ -99,9 +99,14 @@ class VariablesBox:
             output += self.pull()
         return output
 
-    def increase(self, val: Optional[_L]) -> None:
+    def is_in_initial_list(self, _id: int) -> bool:
+        return _id in self.initial_prohibited_words
+
+    def increase(self, val: Optional[_L], replace=True) -> None:
         if val in self.variables:
             _id: int = self.variables.index(val)
+            if (replace) and (self.is_in_initial_list(_id)):
+                self.remove_from_used(_id)
             self.add2used(_id)
 
     def increase_seq(self, vals: List[_L]) -> None:

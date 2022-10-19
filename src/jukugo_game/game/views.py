@@ -71,9 +71,11 @@ class GameStartView(TemplateView):
         level: str = form.get_name(selected_level)
         # form経由でなく、modelから直接セーブする方が好き
         start_state: State = first(first="computer", cpu_level=level, jukugo=None)
-        Play.create_game(account=self.account,
-                         cpu_level=level,
-                         start_jukugo=start_state.obs["jukugo"])
+        Play.create_game(
+            account=self.account,
+            cpu_level=level,
+            start_jukugo=start_state.obs["jukugo"],
+        )
 
     def redirect(self) -> HttpResponseRedirect:
         url: str = self.get_success_url()
@@ -100,10 +102,7 @@ class GamePlayView(TemplateView):
     context_object_name: str = "play"
     model: Play = Play
 
-    players: Dict[str, _A] = {
-        "player": Player,
-        "computer": Computer
-    }
+    players: Dict[str, _A] = {"player": Player, "computer": Computer}
 
     @property
     def account(self) -> SpecialUser:
@@ -190,7 +189,7 @@ class GamePlayView(TemplateView):
             context.update(
                 current=self._get_jukugo_form(),
                 last=self._get_last_jukugo(),
-                num_rally=self.num_rally
+                num_rally=self.num_rally,
             )
 
         # 初期値=Noneを回避する

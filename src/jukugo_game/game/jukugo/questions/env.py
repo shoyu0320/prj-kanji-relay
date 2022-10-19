@@ -28,14 +28,16 @@ class JukugoRelayEnv(Env):
         jukugo_list: List[str] = [],
         user_id: int = 0,
         user_name: Optional[str] = None,
-        checkers: List[_C] = []
+        checkers: List[_C] = [],
     ) -> None:
         super().__init__()
         self.jukugo_box: VariablesBox
         if isinstance(jukugo_list, VariablesBox):
             self.jukugo_box = jukugo_list
         else:
-            self.jukugo_box = VariablesBox(jukugo_list, box_id=user_name, name=user_name)
+            self.jukugo_box = VariablesBox(
+                jukugo_list, box_id=user_name, name=user_name
+            )
         self.user_id: int = user_id
         self.user_name: Optional[str] = user_name
         self.checker: JukugoCheckerPipeline = JukugoCheckerPipeline(
@@ -43,7 +45,7 @@ class JukugoRelayEnv(Env):
             level=self.jukugo_box,
             player_id=self.user_id,
             assert_type="error",
-            valid_method="union"
+            valid_method="union",
         )
         self.previous_state: State = State()
 
@@ -78,27 +80,18 @@ class JukugoRelayEnv(Env):
             jukugo = None
         return jukugo
 
-    def set_new_observation(self,
-                            jukugo: str,
-                            jukugo_id: Optional[int] = None,
-                            yomi: Optional[str] = None
-                            ) -> None:
+    def set_new_observation(
+        self, jukugo: str, jukugo_id: Optional[int] = None, yomi: Optional[str] = None
+    ) -> None:
         # 観測更新
         # TODO variable_boxにTuple[jukugo, jukugo_id, yomi]を与えて絞り出す
-        self.state.set_obs({
-            "jukugo": jukugo,
-            "jukugo_id": jukugo_id,
-            "yomi": yomi
-        })
+        self.state.set_obs({"jukugo": jukugo, "jukugo_id": jukugo_id, "yomi": yomi})
         if self.previous_state.obs.get("jukugo", None) is not None:
             self.checker(cpu_state=self.previous_state, user_state=self.state)
 
     def set_new_info(self, info: Dict[str, Any] = {}) -> None:
         unused: List[str] = self.jukugo_box.get_named_unused_vars(self.user_name)
-        info.update(
-            unused_jukugo=unused,
-            valid_info=self.checker.valid_info
-        )
+        info.update(unused_jukugo=unused, valid_info=self.checker.valid_info)
         self.state.set_info(info)
 
     def set_new_done(self, is_done: bool = False) -> None:
