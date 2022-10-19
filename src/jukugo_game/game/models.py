@@ -70,10 +70,14 @@ class Play(models.Model):
         db_table: str = "play"
 
     def get_is_done_from_player(self, **kwargs) -> None:
-        player: Optional[_A] = kwargs.get("user", None) or kwargs.get("cpu", None)
-        for name in ["user", "cpu"]:
-            player = player or kwargs.get(name)
-        return player.is_done
+        player_set: _QS
+        player: _A
+        is_done: bool = False
+        for name in ["player", "computer"]:
+            player_set = getattr(self, name).all()
+            player = player_set.last()
+            is_done |= player.is_done
+        return is_done
 
     def increment(self, **kwargs) -> None:
         for k, v in kwargs.items():
@@ -82,6 +86,8 @@ class Play(models.Model):
         self.is_done = self.get_is_done_from_player(**kwargs)
         self.num_rally += 1
         self.answerer = not self.answerer
+        update_args: Dict[str, Any] = self.__get_update_dict()
+        Play.objects.filter(game_id=self.game_id).update(**update_args)
 
 # makemigrations, migrate はいらないものが入らないように、migrations内を消しつつ進めること
 # こいつがデータベースの中身を決める

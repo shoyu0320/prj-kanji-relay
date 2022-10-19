@@ -1,9 +1,10 @@
 from typing import Any, Dict, Optional, Tuple, TypeVar
 
 from account.models import SpecialUser
+from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 # Create your views here.
 from django.views.generic import ListView, TemplateView
 
@@ -13,6 +14,7 @@ from .jukugo.questions.state import State
 from .models import AbstractGamePlayer, Computer, Play, Player
 
 _A = TypeVar("_A", bound=AbstractGamePlayer)
+_QS = TypeVar("_QS", bound=QuerySet)
 
 
 class GameStartView(TemplateView):
@@ -26,9 +28,10 @@ class GameStartView(TemplateView):
         return SpecialUser.objects.get(pk=pk)
 
     @property
-    def current_game(self) -> Optional[Play]:
+    def current_game(self) -> Optional[_A]:
         account: SpecialUser = self.account
-        return account.play.last()
+        games: _QS = account.play.all()
+        return games.last()
 
     def _get_url(self, kwargs: Dict[str, Any]) -> str:
         if self._level_defined(kwargs):
@@ -42,8 +45,7 @@ class GameStartView(TemplateView):
     def _get_attrs(self) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {"pk": self.request.user.pk}
         # TODO 便宜上最後のユーザーを取り出してるけど、セキュアにはIDで取り出すのが良さそう(OBJECT.get(id=specified_id))
-        last_obj: Optional[Computer] = Computer.objects.last()
-        level: str = last_obj.level
+        level: str = self.current_game.level
         if level is not None:
             kwargs.update(level=level)
         return kwargs
@@ -56,7 +58,7 @@ class GameStartView(TemplateView):
     def get(
         self, request: HttpRequest, *args: Tuple[Any, ...], **kwargs: Dict[str, Any]
     ) -> HttpResponse:
-        # これでプルダウン型のレベル調整を可能にする
+        # これでプルダウン型のレベル調整を可能にする <- いらない
         form: LevelChoiceForm = LevelChoiceForm()
         context: Dict[str, LevelChoiceForm] = {"level": form}
         return render(request, self.template_name, context)
@@ -68,10 +70,9 @@ class GameStartView(TemplateView):
         level: str = form.get_name(selected_level)
         # form経由でなく、modelから直接セーブする方が好き
         start_state: State = first(first="computer", cpu_level=level, jukugo=None)
-        game: Play = Play.\
-            create_game(cpu_level=level, start_jukugo=start_state.obs["jukugo"])
-        account: SpecialUser = self.account
-        account.play.add(game)
+        Play.create_game(account=self.account,
+                         cpu_level=level,
+                         start_jukugo=start_state.obs["jukugo"])
 
     def redirect(self) -> HttpResponseRedirect:
         url: str = self.get_success_url()
@@ -102,21 +103,17 @@ class GamePlayView(TemplateView):
         "player": Player,
         "computer": Computer
     }
-    name_map: Dict[str, str] = {
-        "player": "user",
-        "computer": "cpu"
-    }
 
     @property
     def account(self) -> SpecialUser:
-        pk: str = self.kwargs["pk"]
-        account: SpecialUser = SpecialUser.objects.get(pk=pk)
-        return account
+        pk: int = self.kwargs["pk"]
+        return SpecialUser.objects.get(pk=pk)
 
     @property
-    def current_game(self) -> Optional[Play]:
+    def current_game(self) -> Optional[_A]:
         account: SpecialUser = self.account
-        return account.play.last()
+        games: _QS = account.play.all()
+        return games.last()
 
     @property
     def num_rally(self) -> int:
@@ -135,25 +132,27 @@ class GamePlayView(TemplateView):
         given_jukugo: str = request.POST.get("jukugo")
         cpu_level: str = self.kwargs["level"]
         state: State
+        kwargs: Dict[str, Any] = {}
 
         for name in ["player", "computer"]:
             if "computer" in name:
                 given_jukugo = step(name, cpu_level)
+                kwargs.update(level=cpu_level)
             state = write(given_jukugo, name, cpu_level)
-            player: _A = self.players[name](is_done=state.done, **state.obs)
-            player.save()
-            print(name, len(state.info["unused_jukugo"]))
-            game.increment(**{self.name_map[name]: player}, **state.obs)
+            kwargs.update(game=game, is_done=state.done)
+            player: _A = self.players[name](**kwargs, **state.obs)
+            player.save(force_insert=True)
+            game.increment(**state.obs)
             given_jukugo = state.obs["jukugo"]
             if game.is_done:
                 return True
+            kwargs = {}
 
         return False
 
     def _get_attrs(self) -> Dict[str, Any]:
         kwargs: Dict[str, Any] = {"pk": self.request.user.pk}
-        last_cpu: Computer = self.current_game.cpu
-        level: str = last_cpu.level
+        level: str = self.current_game.level
         if level is not None:
             kwargs.update(level=level)
         return kwargs
@@ -167,13 +166,8 @@ class GamePlayView(TemplateView):
         url: str = self.get_end_url()
         return reverse(url, kwargs=kwargs)
 
-    def _step_account(self) -> None:
-        account: SpecialUser = self.account
-        game: Play = self.current_game
-        account.increment(game)
-
     def get_end_url(self) -> str:
-        self._step_account()
+        self.account.increment()
         if self.current_answerer_is_player:
             return "game:win"
         else:
