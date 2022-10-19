@@ -262,3 +262,28 @@ class GameDetailView(ListView):
     template_name = "game/game_detail.html"
     model = Play
     context_object_name = "play"
+    success_url: str = reverse_lazy("game:detail")
+
+    @property
+    def account(self) -> SpecialUser:
+        pk: int = self.kwargs["pk"]
+        return SpecialUser.objects.get(pk=pk)
+
+    @property
+    def all_games(self) -> Optional[_QS]:
+        account: SpecialUser = self.account
+        return account.play.all()
+
+    @property
+    def current_game(self) -> Optional[_A]:
+        games: _QS = self.all_games
+        return games.last()
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context: Dict[str, Any] = super().get_context_data(**kwargs)
+        all_games: Play = self.all_games
+        context["game_list"] = [
+            (game.pk, game.num_rally, game.level, game.get_jukugo_list())
+            for game in all_games
+        ]
+        return context
