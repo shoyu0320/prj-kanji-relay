@@ -94,6 +94,8 @@ class Play(models.Model):
 
     def increment(self, **kwargs) -> None:
         for k, v in kwargs.items():
+            if v is None:
+                continue
             setattr(self, k, v)
 
         self.is_done = self.get_is_done_from_player(**kwargs)

@@ -245,6 +245,8 @@ class GameResultView(ListView):
     def available_jukugo(self) -> List[str]:
         game: Play = self.current_game
         last_jukugo: str = game.computer.all().last().jukugo
+        if last_jukugo is None:
+            last_jukugo = game.player.all().last().jukugo
         level: str = game.level
         return get_unused_jukugo(
             player="player", cpu_level=level, last_jukugo=last_jukugo
