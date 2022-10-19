@@ -44,11 +44,17 @@ class AbstractCheckType:
             attr_list.append(getattr(self, attr))
         return tuple(attr_list)
 
+    def avoid_null(self, *args, **kwargs) -> None:
+        pass
+
     def __call__(self, *args, **kwargs) -> None:
-        self.set_valid(self.validate(*args, **kwargs))
-        comment: str = self.create_comment(*args, **kwargs)
-        self.set_comment(comment)
-        self._raise(comment)
+        try:
+            self.set_valid(self.validate(*args, **kwargs))
+            comment: str = self.create_comment(*args, **kwargs)
+            self.set_comment(comment)
+            self._raise(comment)
+        except ValueError:
+            self.avoid_null()
 
 
 class DefinedJukugoChecker(AbstractCheckType):
@@ -98,6 +104,12 @@ class JukugoDifferencesChecker(AbstractCheckType):
         "and cpu jukugo; {0} vs {1}"
     )
     raise_type: Exception = ValueError
+
+    def avoid_null(self, *args, **kwargs) -> None:
+        comment: str = (
+            "Difference between jukugo and NoneType object cannot be found.")
+        self.set_comment(comment)
+        self._raise(comment)
 
     def _get_jukugo(self, player: str = "user", **kwargs) -> str:
         if player not in ["user", "cpu"]:
