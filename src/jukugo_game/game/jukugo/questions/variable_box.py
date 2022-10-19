@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import Dict, FrozenSet, List, Optional, TypeVar, Union
 
@@ -41,7 +42,7 @@ class VariablesBox:
 
     # TODO プレイヤーごとのフルセットを作成する
     def reset(self):
-        self.used_ids = self.initial_prohibited_words
+        self.used_ids = copy.deepcopy(self.initial_prohibited_words)
 
     @property
     def full_set(self) -> FrozenSet[int]:
