@@ -1,21 +1,14 @@
-import uuid
-from typing import Any, Callable, Dict, Tuple, TypeVar
+from typing import Any, Callable
 
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.db import models
 from django.forms import ModelForm
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, TemplateView
 
 from .forms import LoginForm, SignupForm
 from .models import SpecialUser
-
-_Q = TypeVar("_Q", bound=models.QuerySet)
-_A = TypeVar("_A", bound=Tuple[Any, ...])
-_K = TypeVar("_K", bound=Dict[str, Any])
-GUEST = uuid.uuid4
 
 
 class IndexView(TemplateView):
@@ -33,7 +26,7 @@ class IndexView(TemplateView):
 class SignupView(CreateView):
     template_name: str = "account/signup.html"
     form_class: ModelForm = SignupForm
-    success_url: Callable[[str], Any] = reverse_lazy("home")
+    success_url: str = reverse_lazy("home")
 
     def form_valid(self, form):
         result = super().form_valid(form)
@@ -60,6 +53,6 @@ class SuperLogoutView(LogoutView):
 
 class SuperUserView(LoginRequiredMixin, TemplateView):
     template_name: str = "account/user.html"
-    success_url: Callable[[str], Any] = reverse_lazy("account:user")
+    success_url: str = reverse_lazy("account:user")
     context_object_name = "player"
     model = SpecialUser
