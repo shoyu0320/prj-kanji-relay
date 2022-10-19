@@ -13,6 +13,7 @@
     </h1>
     <h2>
         <a href="{% url 'game:start' pk=user.pk %}">ゲーム開始</a><br>
+        <a href="{% url 'game:detail' pk=user.pk %}">成績</a><br>
         <a href="{% url 'logout'%}">ログアウト</a><br>
         <a href="{% url 'home' %}">ホーム</a><br>
     </h2>

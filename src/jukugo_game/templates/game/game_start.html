@@ -26,6 +26,7 @@
     </h3>
     <h2>
         <a href="{% url 'account:user' request.user.pk %}">マイページ</a><br>
+        <a href="{% url 'game:detail' pk=user.pk %}">成績</a><br>
         <a href="{% url 'logout'%}">ログアウト</a><br>
     </h2>
 
