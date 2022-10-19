@@ -212,16 +212,50 @@ class GamePlayView(TemplateView):
             return "熟語"
 
 
-class GameWinView(TemplateView):
+class GameWinView(ListView):
     template_name = "game/game_win.html"
-    model = Player
-    context_object_name = "player"
+    model = Play
+    context_object_name = "play"
+
+    @property
+    def account(self) -> SpecialUser:
+        pk: int = self.kwargs["pk"]
+        return SpecialUser.objects.get(pk=pk)
+
+    @property
+    def current_game(self) -> Optional[_A]:
+        account: SpecialUser = self.account
+        games: _QS = account.play.all()
+        return games.last()
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context: Dict[str, Any] = super().get_context_data(**kwargs)
+        game: Play = self.current_game
+        context["jukugo_list"] = game.get_jukugo_list()
+        return context
 
 
-class GameLoseView(TemplateView):
+class GameLoseView(ListView):
     template_name = "game/game_lose.html"
-    model = Player
-    context_object_name = "player"
+    model = Play
+    context_object_name = "play"
+
+    @property
+    def account(self) -> SpecialUser:
+        pk: int = self.kwargs["pk"]
+        return SpecialUser.objects.get(pk=pk)
+
+    @property
+    def current_game(self) -> Optional[_A]:
+        account: SpecialUser = self.account
+        games: _QS = account.play.all()
+        return games.last()
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context: Dict[str, Any] = super().get_context_data(**kwargs)
+        game: Play = self.current_game
+        context["jukugo_list"] = game.get_jukugo_list()
+        return context
 
 
 class GameDetailView(ListView):

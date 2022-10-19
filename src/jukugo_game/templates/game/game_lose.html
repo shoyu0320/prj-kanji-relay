@@ -7,12 +7,41 @@
     <h2>
         まけ。
     </h2>
+    <h3>
+        熟語リスト<br>
+        <table border="1" class="table table-condensed">
+            <tbody>
+                <tr>
+                    <th class="table-primary">
+                        <center>回答者</center>
+                    </th>
+                    <th class="table-primary">
+                        <center>熟語</center>
+                    </th>
+                    <th class="table-primary">
+                        <center>正誤</center>
+                    </th>
+                </tr>
+                {% for jukugo in jukugo_list %}
+                <tr>
+                    <td>
+                        <center>{{ jukugo.0 }}</center>
+                    </td>
+                    <td>
+                        <center>{{ jukugo.1 }}</center>
+                    </td>
+                    <td>
+                        <center>{{ jukugo.2 }}</center>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </h3>
     <h2>
-        <h1>
-            熟語リレー
-        </h1>
         <a href="{% url 'game:start' pk=user.pk %}">もう一回やる</a><br>
         <a href="{% url 'account:user' pk=user.pk %}">マイページ</a><br>
+        <a href="{% url 'game:detail' pk=user.pk %}">成績</a><br>
         <a href="{% url 'logout'%}">ログアウト</a><br>
         <a href="{% url 'home' %}">ホーム</a><br>
     </h2>
