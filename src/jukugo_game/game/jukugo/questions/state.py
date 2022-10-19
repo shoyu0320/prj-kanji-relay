@@ -1,12 +1,4 @@
-import os
 from typing import Any, Dict
-
-src_dir, *res = os.getcwd().split("/src")
-
-if len(res) > 0:
-    import sys
-
-    sys.path.append(src_dir + "/src")
 
 
 class State:

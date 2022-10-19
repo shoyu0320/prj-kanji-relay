@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>漢字どりる</title>
+</head>
+
+<body name="body">
+    <h1 name="rally">
+        熟語リレー<br>
+        {% if num_rally >= 0 %}
+        <center name="jukugo-last">
+            ラリー回数: {{ num_rally }}
+        </center>
+        {% endif %}
+    </h1>
+    <form action="" method="post" name="current">
+        {% if play.jukugo != "" %}
+        <h2>
+            前の漢字:
+            <center name="jukugo-last">
+                <big name="jukugo-big">
+                    {{ last }}
+                </big>
+            </center>
+        </h2>
+        <h3 name="jukugo-input">
+            {% csrf_token %}
+            {{ current.as_p }}
+            <button type="submit" value="{{ request.path }}">提出する</button>
+        </h3>
+        {% else %}
+        <h2>redirecting...</h2>
+        {% endif %}
+    </form>
+    <h2>
+        <a href="{% url 'account:user' request.user.pk %}">マイページ</a><br>
+        <a href="{% url 'logout'%}">ログアウト</a><br>
+    </h2>
+</body>
+
+</html>

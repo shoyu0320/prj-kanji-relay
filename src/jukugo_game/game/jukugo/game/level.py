@@ -1,18 +1,26 @@
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 import yaml
 
 
 class JukugoList:
     level2dir: Dict[str, str] = {
-        "kanjipedia": {"jdir": "../../data/niji-jukugo_list.yml", "jtype": "dict"},
+        "kanjipedia": {"j_dir": "game/fixture/jukugo_list.yml", "jtype": "dict"},
     }
 
-    def __init__(self):
+    def __init__(self, scope: Optional[List[int]] = None, mode: Optional[str] = None):
         self.level: Dict[str, List[str]] = {}
         for k, v in self.level2dir.items():
             j_list: List[str] = self._get_jukugo(**v)
             self.level[k] = self.clean_list(j_list)
+        self.scope: Optional[List[int]] = scope
+        self.mode: Optional[str] = mode
+
+    def set_scope(self, scope: Optional[List[int]] = None) -> None:
+        self.scope = scope
+
+    def set_mode(self, mode: Optional[str] = None) -> None:
+        self.mode = mode
 
     def clean_list(self, j_list: List[str]) -> List[str]:
         j: str
@@ -23,11 +31,11 @@ class JukugoList:
             new_set.add(j)
         return list(new_set)
 
-    def _get_jukugo(self, jdir: str, jtype: str = "dict") -> List[str]:
+    def _get_jukugo(self, j_dir: str, jtype: str = "dict") -> List[str]:
         if jtype == "dict":
-            return self._get_jukugo_dict(jdir)
+            return self._get_jukugo_dict(j_dir)
         elif jtype == "list":
-            return self._get_jukugo_list(jdir)
+            return self._get_jukugo_list(j_dir)
 
     def _get_jukugo_list(self, jukugo_dir: str) -> List[str]:
         with open(jukugo_dir) as f:

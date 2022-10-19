@@ -16,7 +16,6 @@ Including another URLconf
 from account import views
 from django.contrib import admin
 from django.urls import include, path
-from game import views as game_view
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,7 +24,6 @@ urlpatterns = [
     path("signup/", views.SignupView.as_view(), name="signup"),
     # log out
     path("logout/", views.SuperLogoutView.as_view(), name="logout"),
-    path("game/<int:pk>/", game_view.AccountView.as_view(), name="game_account"),
-    path("game/", include("game.urls")),
     path("account/", include("account.urls")),
+    path("game/user_id=<int:pk>/", include("game.urls")),
 ]

@@ -1,28 +1,23 @@
-import os
 import random
-from typing import Dict, FrozenSet, List, Optional, Union
+from typing import Dict, FrozenSet, List, Optional, TypeVar, Union
 
-# TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
-src_dir, *res = os.getcwd().split("/src")
-
-if len(res) > 0:
-    import sys
-
-    sys.path.append(src_dir + "/src")
+_L = TypeVar("_L", bound=Union[int, str])
 
 
 class VariablesBox:
     def __init__(
         self,
-        variables: List[Union[int, str]],
-        box_id: Union[int, str] = 0,
-        players: List[str] = [],
+        variables: List[_L],
+        box_id: _L = 0,
+        name: Optional[str] = None
     ) -> None:
-        self.variables: List[Union[int, str]] = variables
-        self.box_id: Union[int, str] = box_id
+        self.variables: List[_L] = variables
+        self.box_id: _L = box_id
         self.used_ids: List[int] = []
         self.max_ids: int = len(variables)
-        self.players: Dict[str, List[int]] = {}
+        self.name: str = name
+        self.players: Dict[str, List[int]] = {name: self.variables}
+        self.initial_prohibited_words: List[int] = []
 
     def __setitem__(self, key: str, val: List[int]) -> None:
         self.players[key] = val
@@ -37,7 +32,7 @@ class VariablesBox:
         return list(self[key] - used_ids)
 
     def get_named_unused_vars(self, key: str) -> List[str]:
-        output: List[Union[int, str]] = []
+        output: List[_L] = []
         us: int
         available_set: List[str] = self.get_named_unused_set(key)
         for us in available_set:
@@ -46,7 +41,7 @@ class VariablesBox:
 
     # TODO プレイヤーごとのフルセットを作成する
     def reset(self):
-        self.used_ids = []
+        self.used_ids = self.initial_prohibited_words
 
     @property
     def full_set(self) -> FrozenSet[int]:
@@ -58,62 +53,57 @@ class VariablesBox:
         return list(self.full_set - used_ids)
 
     @property
-    def unused_vars(self) -> List[Union[int, str]]:
-        output: List[Union[int, str]] = []
+    def unused_vars(self) -> List[_L]:
+        output: List[_L] = []
         us: int
         for us in self.unused_set:
             output += [self.variables[us]]
         return output
 
-    def _check_id_list(self) -> None:
-        # unused list のサイズのみで簡易チェックする
-        if len(self.used_ids) > self.max_ids:
-            raise IndexError(
-                "Sequence size of self.used_ids has larger size"
-                f"than {self.max_ids}; number of variables"
-            )
-        if len(self.used_ids) != len(set(self.used_ids)):
-            raise ValueError(
-                "Sequence self.used_ids mustn't"
-                f"have two or more same ids, but; {self.used_ids}"
-            )
-
-    def is_still_unused(self, val: Union[int, str]) -> bool:
+    def is_still_unused(self, val: _L) -> bool:
         if val in self.unused_vars:
             return True
         else:
             print(f"辞書にない熟語です。; {val}")
             return False
 
+    def set_available_list(self, available_samples: List[int]) -> None:
+        unavailable_samples: FrozenSet[int] = self.full_set - set(available_samples)
+        self.initial_prohibited_words += list(unavailable_samples)
+        self.add(list(unavailable_samples))
+
+    def add(self, used_ids: List[int]) -> None:
+        for u_ids in used_ids:
+            self.add2used(u_ids)
+
     def add2used(self, used_id: int) -> None:
         self.used_ids.append(used_id)
-        self._check_id_list()
 
-    def push(self, val: Union[str, int]) -> None:
+    def push(self, val: _L) -> None:
         self.variables += [val]
         self.max_ids += 1
 
-    def push_seq(self, vals: List[Union[str, int]]) -> None:
+    def push_seq(self, vals: List[_L]) -> None:
         self.variables += vals
         self.max_ids += len(vals)
 
-    def pull(self) -> List[Union[str, int]]:
+    def pull(self) -> List[_L]:
         sample: int = random.choice(self.unused_set)
         self.add2used(sample)
         return [self.variables[sample]]
 
-    def pull_seq(self, n_samples: int = 1) -> List[Union[str, int]]:
-        output: List[Union[str, int]] = []
+    def pull_seq(self, n_samples: int = 1) -> List[_L]:
+        output: List[_L] = []
         for _ in range(n_samples):
             output += self.pull()
         return output
 
-    def increase(self, val: Optional[Union[int, str]]) -> None:
+    def increase(self, val: Optional[_L]) -> None:
         if val in self.variables:
             _id: int = self.variables.index(val)
             self.add2used(_id)
 
-    def increase_seq(self, vals: List[Union[int, str]]) -> None:
-        v: List[Union[int, str]]
+    def increase_seq(self, vals: List[_L]) -> None:
+        v: List[_L]
         for v in vals:
             self.increase(v)

@@ -26,7 +26,7 @@ class IndexView(TemplateView):
 class SignupView(CreateView):
     template_name: str = "account/signup.html"
     form_class: ModelForm = SignupForm
-    success_url: Callable[[str], Any] = reverse_lazy("account:user")
+    success_url: str = reverse_lazy("home")
 
     def form_valid(self, form):
         result = super().form_valid(form)
@@ -42,26 +42,17 @@ class SuperLoginView(LoginView):
 
 class SuperLogoutView(LogoutView):
     template_name: str = "account/logout.html"
-
-
-class SuperUserView(LoginRequiredMixin, TemplateView):
-    template_name: str = "account/user.html"
-    success_url: Callable[[str], Any] = reverse_lazy("account:user")
     context_object_name = "player"
     model = SpecialUser
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["player"] = self.request.user
+        context["players"] = SpecialUser.objects.all()
         return context
 
 
-class GuestView(LoginRequiredMixin, TemplateView):
-    template_name: str = "account/guest.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["users"] = SpecialUser.objects.exclude(
-            username=self.request.user.username
-        )
-        return context
+class SuperUserView(LoginRequiredMixin, TemplateView):
+    template_name: str = "account/user.html"
+    success_url: str = reverse_lazy("account:user")
+    context_object_name = "player"
+    model = SpecialUser

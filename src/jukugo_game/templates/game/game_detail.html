@@ -1,0 +1,90 @@
+</head>
+<style>
+    .wrap {
+        display: flex;
+        overflow-x: scroll;
+        overflow-y: scroll;
+        height: 400;
+        width: 1000;
+        border: 1px solid #000;
+    }
+
+    .rally {
+        display: inline-block;
+        vertical-align: top;
+        padding: 10px;
+        border: 1px solid #999;
+    }
+
+    table {
+        width: 200;
+    }
+</style>
+
+<body>
+    <h1>
+        熟語リレー
+    </h1>
+    <h2>
+        戦歴。
+    </h2>
+    <h2>
+        <a href="{% url 'account:user' pk=user.pk %}">マイページ</a><br>
+    </h2>
+    <h3>
+        <center>
+            <caption>ゲーム戦歴(縦横スクロール)</caption>
+            <div class="wrap">
+                {% for pk, rally, level, jukugo_list in game_list %}
+                <top>
+                    <table border="0">
+                        <tr>
+                            <td>
+                                <table border="1" class="table jukugo-rally">
+                                    <caption>
+                                        ゲームNo.{{ pk }}<br>
+                                        {{ level }}レベル<br>
+                                        ラリー数: {{ rally }}
+                                    </caption>
+                                    <tbody>
+                                        <tr>
+                                            <th class="table-primary">
+                                                <center>回答者</center>
+                                            </th>
+                                            <th class="table-primary">
+                                                <center>熟語</center>
+                                            </th>
+                                            <th class="table-primary">
+                                                <center>正誤</center>
+                                            </th>
+                                        </tr>
+                                        {% for jukugo in jukugo_list %}
+                                        <tr>
+                                            <td>
+                                                <center>{{ jukugo.0 }}</center>
+                                            </td>
+                                            <td>
+                                                <center>{{ jukugo.1 }}</center>
+                                            </td>
+                                            <td>
+                                                <center>{{ jukugo.2 }}</center>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </top>
+                {% endfor %}
+            </div>
+        </center>
+    </h3>
+    <h2>
+        <a href="{% url 'logout'%}">ログアウト</a><br>
+        <a href="{% url 'home' %}">ホーム</a><br>
+    </h2>
+</body>
+
+</html>

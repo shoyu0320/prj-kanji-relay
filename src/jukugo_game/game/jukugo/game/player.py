@@ -1,23 +1,16 @@
-import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypeVar, Union
 
 import numpy as np
+from game.jukugo.questions.env import JukugoRelayEnv
+from game.jukugo.questions.state import State
+from game.jukugo.questions.variable_box import VariablesBox
+from game.jukugo.utils.logger import GameLogger
 
-# TODO runnerクラス、チェッカークラス（熟語の部分一致など）、
-src_dir, *res = os.getcwd().split("/src")
+from .checker import (DefinedJukugoChecker, JukugoDifferencesChecker,
+                      SequenceSizeChecker, UnusedJukugoChecker, WordIDChecker)
+from .level import JukugoList
 
-if len(res) > 0:
-    import sys
-
-    sys.path.append(src_dir + "/src")
-
-
-from game.checker import JukugoChecker
-from game.level import JukugoList
-from questions.env import JukugoRelayEnv
-from questions.state import State
-from questions.variable_box import VariablesBox
-from utils.logger import GameLogger
+_C = TypeVar("_C", bound="LevelChangeableESPlayer")
 
 
 class AbstractPlayer:
@@ -27,29 +20,40 @@ class AbstractPlayer:
         self.name: str = self.input_name(name)
         self.player_id: int = player_id
         self.level: VariablesBox(level) = VariablesBox(level)
-        self.checker: Optional[JukugoChecker] = JukugoChecker(
-            self.level, self.player_id
-        )
-        self.set_env(self.level)
+        checkers: List[_C] = [
+                DefinedJukugoChecker,
+                UnusedJukugoChecker,
+                JukugoDifferencesChecker,
+                SequenceSizeChecker,
+                WordIDChecker
+            ]
+        self.set_env(self.level, checkers)
         self.logger: GameLogger = GameLogger()
 
-    def reset(self):
-        self.env.reset()
-        self.checker.reset()
+    def set_id(self, player_id: int = 0) -> None:
+        self.player_id = player_id
+
+    def reset(self, jukugo: Optional[str] = None) -> None:
+        self.env.reset(jukugo)
 
     def input_name(self, name: Optional[str] = None) -> str:
         raise NotImplementedError()
 
-    def set_env(self, variables: VariablesBox):
-        self.env: JukugoRelayEnv = JukugoRelayEnv(variables, self.player_id, self.name)
+    def set_env(self, variables: VariablesBox, checkers: List[_C] = []) -> None:
+        self.env: JukugoRelayEnv = JukugoRelayEnv(
+            variables,
+            self.player_id,
+            self.name,
+            checkers
+        )
         self.env.reset()
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]] = None
+        self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
         self.level.increase(self.env.state.obs["jukugo"])
         self.logger.log(
-            "continue", (self.name, self_state.obs["jukugo"], self_state.done)
+            "continue", (self.name, user_state.obs["jukugo"], user_state.done)
         )
         return self.env.state
 
@@ -63,11 +67,12 @@ class DummyPlayer(AbstractPlayer):
         return name
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]]
+        self, cpu_state: State, user_state: Optional[Union[str, State]]
     ) -> State:
-        self.env._set_new_state(self_state)
-        self.checker(opponent_state, self.env.state)
-        return super().submit(opponent_state, self.env.state)
+        self.env.set_new_state(user_state)
+        state: State = super().submit(cpu_state, self.env.state)
+        self.env.set_new_state_without_obs()
+        return state
 
 
 class EnvStepPlayer(AbstractPlayer):
@@ -79,33 +84,53 @@ class EnvStepPlayer(AbstractPlayer):
         return name
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]] = None
+        self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
-        self.env._step(opponent_state.obs)
-        self.checker(opponent_state, self.env.state)
-        return super().submit(opponent_state, self.env.state)
+        return self.step(cpu_state)
 
 
 class LevelChangeableESPlayer(EnvStepPlayer):
-    jukugo_rate: Dict[str, float] = {
-        "full": 1.0,
-        "hard": 0.8,
-        "normal": 0.5,
-        "easy": 0.2,
+    difficulties: Dict[str, float] = {
+        "master": 1.0,
+        "hard": 0.3,
+        "normal": 0.1,
+        "easy": 0.05,
     }
 
-    def __init__(self, *args, level: str = "normal", **kwargs) -> None:
+    def __init__(self, *args, difficulty: str = "normal", **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.level_rate: float = self.jukugo_rate[level]
-        self.level[self.name] = self._create_user_dict()
+        self.level_rate: float = self.difficulties[difficulty]
+        available_jukugo: List[int] = self._create_user_dict()
+        self.level.set_available_list(available_jukugo)
 
     def _create_user_dict(self) -> List[int]:
-        available_ids: List[str] = list(self.level.full_set)
+        available_ids: List[int] = list(self.level.full_set)
         size: int = int(self.level.max_ids * self.level_rate)
         samples: List[int] = np.random.choice(
             available_ids, replace=False, size=size
         ).tolist()
         return samples
+
+    @classmethod
+    def create_all_computers(
+        cls,
+        jukugo_list: List[str],
+        player_id: int = 0,
+        name: str = "computer"
+    ) -> Dict[str, _C]:
+        cpu_list: Dict[str, _C] = {}
+        cpu: _C
+        diff: str
+        for diff in cls.difficulties.keys():
+            cpu = cls(
+                level=jukugo_list,
+                player_id=player_id,
+                name=name,
+                difficulty=diff
+                )
+            cpu_list[diff] = cpu
+            print(diff, len(cpu.level.unused_set))
+        return cpu_list
 
 
 class InputPlayer(AbstractPlayer):
@@ -113,32 +138,30 @@ class InputPlayer(AbstractPlayer):
         return input()
 
     def submit(
-        self, opponent_state: State, self_state: Optional[Union[str, State]] = None
+        self, cpu_state: State, user_state: Optional[Union[str, State]] = None
     ) -> State:
-        used: bool = True
-        while used:
-            self_state = input()
-            used = not self.level.is_still_unused(self_state)
+        while not self.env.checker.is_not_valid:
+            # Stateセットするだけ
+            user_state = input()
+            self.env.set_new_state(user_state)
 
-            # State更新
-            self.env._set_new_state(self_state)
-            self.checker(opponent_state, self.env.state)
-
-        self.env._set_new_state(self_state)
-        return super().submit(opponent_state, self.env.state)
+        self.env.set_new_state(user_state)
+        state: State = super().submit(cpu_state, self.env.state)
+        self.env.set_new_state_without_obs()
+        return state
 
 
 class GameMaster(AbstractPlayer):
-    def input_name(self, name: str):
-        return "GameMaster"
+    def input_name(self, name: Optional[str] = None):
+        return name or "GameMaster"
 
     def first(self, mode: str = "input",) -> State:
+        state: State
         if mode == "input":
-            used: bool = True
-            while used:
-                self_state = input()
-                used = not self.level.is_still_unused(self_state)
-            self.env._set_new_state(self_state)
+            while not self.checker.is_not_valid:
+                state = input()
+                self.env.set_new_state(state)
+            self.env.set_new_state_without_obs()
         elif mode == "auto":
             self.env.reset()
         else:
