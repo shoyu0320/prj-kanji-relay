@@ -54,7 +54,12 @@ def get_unused_jukugo(
     last_jukugo: Optional[str] = None,
 ) -> List[str]:
     player: _A = get_players(cpu_level)[player]
-    return player.env._get_available_jukugo(last_jukugo)
+def get_comment(
+    player: str = "computer",
+    cpu_level: str = "normal",
+) -> List[str]:
+    player: _A = get_players(cpu_level)[player]
+    return player.env.checker.comments
 
 
 def reset_dict(cpu_level: str = "normal", jukugo: Optional[str] = None) -> None:

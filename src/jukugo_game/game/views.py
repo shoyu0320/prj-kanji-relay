@@ -10,7 +10,7 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import ListView, TemplateView
 
 from .forms import JukugoForm, LevelChoiceForm
-from .jukugo.main import first, get_unused_jukugo, step, write
+from .jukugo.main import first, get_comment, get_unused_jukugo, step, write
 from .jukugo.questions.state import State
 from .models import AbstractGamePlayer, Computer, Play, Player
 
@@ -228,6 +228,20 @@ class GameResultView(ListView):
         return games.last()
 
     @property
+    def defeat_player(self) -> str:
+        game: Play = self.current_game
+        if game.result == "勝利":
+            return "computer"
+        else:
+            return "player"
+
+    @property
+    def defeat_comment(self) -> List[str]:
+        defeat: str = self.defeat_player
+        cpu_level: str = self.current_game.level
+        return get_comment(defeat, cpu_level)
+
+    @property
     def available_jukugo(self) -> List[str]:
         game: Play = self.current_game
         last_jukugo: str = game.computer.all().last().jukugo
@@ -241,6 +255,7 @@ class GameResultView(ListView):
         game: Play = self.current_game
         context["jukugo_list"] = game.get_jukugo_list()
         context["available_list"] = self.available_jukugo
+        context["comments"] = self.defeat_comment
         return context
 
 
