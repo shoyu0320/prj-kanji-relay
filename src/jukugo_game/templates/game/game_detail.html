@@ -35,14 +35,14 @@
         <center>
             <caption>ゲーム戦歴(縦横スクロール)</caption>
             <div class="wrap">
-                {% for pk, rally, level, jukugo_list in game_list %}
+                {% for pk, result, rally, level, jukugo_list in game_list %}
                 <top>
                     <table border="0">
                         <tr>
                             <td>
                                 <table border="1" class="table jukugo-rally">
                                     <caption>
-                                        ゲームNo.{{ pk }}<br>
+                                        ゲームNo.{{ pk }}: {{ result }}<br>
                                         {{ level }}レベル<br>
                                         ラリー数: {{ rally }}
                                     </caption>

@@ -1,3 +1,4 @@
+import copy
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
 from game.jukugo.questions.state import State
@@ -53,8 +54,8 @@ class AbstractCheckType:
             comment: str = self.create_comment(*args, **kwargs)
             self.set_comment(comment)
             self._raise(comment)
-        except ValueError:
-            self.avoid_null()
+        except self.raise_type:
+            self.avoid_null(*args, **kwargs)
 
 
 class DefinedJukugoChecker(AbstractCheckType):
@@ -69,10 +70,12 @@ class DefinedJukugoChecker(AbstractCheckType):
     def validate(self, *args, **kwargs) -> bool:
         _dict: VariablesBox = kwargs["level"]
         jukugo: str = self.get_jukugo(**kwargs)
-        return not _dict.is_still_unused(jukugo)
+        return not _dict.include(jukugo)
 
     def create_comment(self, *args, **kwargs) -> str:
         jukugo: str = self.get_jukugo(**kwargs)
+        if jukugo is None:
+            return "Cannot find proper jukugo."
         return self.comment_tmp.format(jukugo)
 
 
@@ -88,26 +91,23 @@ class UnusedJukugoChecker(AbstractCheckType):
     def validate(self, *args, **kwargs) -> bool:
         _dict: VariablesBox = kwargs["level"]
         jukugo: str = self.get_jukugo(**kwargs)
-        return not (jukugo in _dict.unused_vars)
+        return (jukugo not in _dict.unused_vars) and _dict.include(jukugo)
 
     def create_comment(self, *args, **kwargs) -> str:
         jukugo: str = self.get_jukugo(**kwargs)
+        if jukugo is None:
+            return "Cannot find proper jukugo."
         return self.comment_tmp.format(jukugo)
 
 
 class JukugoDifferencesChecker(AbstractCheckType):
     # 熟語のリレーが規則通りでなかったときにTrueを返す
-    comment_tmp: str = (
-        "It has bad differences, "
-        "which is not match with game rule, "
-        "between the your jukugo "
-        "and cpu jukugo; {0} vs {1}"
-    )
-    raise_type: Exception = ValueError
+    comment_tmp: str = "Jukugo must have the manner like {0}, but your jukugo is {1}"
+    pad: List[str] = ["●", "●"]
+    raise_type: Exception = TypeError
 
     def avoid_null(self, *args, **kwargs) -> None:
-        comment: str = (
-            "Difference between jukugo and NoneType object cannot be found.")
+        comment: str = self.create_comment(*args, **kwargs)
         self.set_comment(comment)
         self._raise(comment)
 
@@ -118,7 +118,9 @@ class JukugoDifferencesChecker(AbstractCheckType):
         _state: State = kwargs[state_key]
         return _state.obs["jukugo"]
 
-    def _calc_diff(self, user_kanji: str, cpu_kanji: str, pos_kanji: int, player_id: int) -> bool:
+    def _calc_diff(
+        self, user_kanji: str, cpu_kanji: str, pos_kanji: int, player_id: int
+    ) -> bool:
         # posとidが一致した時に必ず漢字も一致している場合にTrueを返したい
         # posとidが一致しない場合に必ず漢字は変わっていてほしい
         pos_score: bool = pos_kanji == player_id
@@ -126,11 +128,9 @@ class JukugoDifferencesChecker(AbstractCheckType):
         diff_score: bool = pos_score == kanji_score
         return diff_score
 
-    def _get_differences(self,
-                         user_jukugo: str,
-                         cpu_jukugo: str,
-                         **kwargs
-                         ) -> List[bool]:
+    def _get_differences(
+        self, user_jukugo: str, cpu_jukugo: str, **kwargs
+    ) -> List[bool]:
         diff_list: List[bool] = []
         player_id: int = kwargs["player_id"]
         flg: bool
@@ -142,15 +142,17 @@ class JukugoDifferencesChecker(AbstractCheckType):
     def validate(self, *args, **kwargs) -> bool:
         user_jukugo: str = self._get_jukugo(player="user", **kwargs)
         cpu_jukugo: str = self._get_jukugo(player="cpu", **kwargs)
-        diff_list: List[int] = self.\
-            _get_differences(user_jukugo, cpu_jukugo, **kwargs)
+        diff_list: List[int] = self._get_differences(user_jukugo, cpu_jukugo, **kwargs)
 
         return not all(diff_list)
 
     def create_comment(self, *args, **kwargs) -> str:
         user_jukugo: str = self._get_jukugo(player="user", **kwargs)
         cpu_jukugo: str = self._get_jukugo(player="cpu", **kwargs)
-        return self.comment_tmp.format(user_jukugo, cpu_jukugo)
+        player_id: int = kwargs["player_id"]
+        jukugo: List[str] = copy.deepcopy(self.pad)
+        jukugo[player_id] = cpu_jukugo[player_id]
+        return self.comment_tmp.format("".join(jukugo), user_jukugo)
 
 
 class SequenceSizeChecker(AbstractCheckType):
@@ -158,8 +160,8 @@ class SequenceSizeChecker(AbstractCheckType):
     comment_tmp: str = (
         "A count of used jukugo must have smaller"
         "han a jukugo dictionary"
-        f"But the count of used jukugo is {0}, "
-        f"and the dictionary size is {1}"
+        "But the count of used jukugo is {0}, "
+        "and the dictionary size is {1}"
     )
     raise_type: Exception = IndexError
 
@@ -187,8 +189,8 @@ class WordIDChecker(AbstractCheckType):
     # ワードに重複があった場合にTrueを返す
     comment_tmp: str = (
         "Sequence self.used_ids mustn't "
-        f"have two or more same ids, but; {0}. "
-        f"{1} is duplicated."
+        "have two or more same ids, but; {0}. "
+        "{1} is duplicated."
     )
     raise_type: Exception = KeyError
 
@@ -207,21 +209,22 @@ class WordIDChecker(AbstractCheckType):
 
     def create_comment(self, *args, **kwargs) -> str:
         raw_list: list[int] = self._get_word_list(*args, replace=True, **kwargs)
-        return self.comment_tmp.format(raw_list, raw_list[-1])
+        return self.comment_tmp.format(raw_list[-2:], raw_list[-1])
 
 
 class CheckerPipelineBase:
-    def __init__(self,
-                 checkers: List[_C],
-                 assert_type: str = "comment",
-                 valid_method: str = "union"
-                 ) -> None:
+    def __init__(
+        self,
+        checkers: List[_C],
+        assert_type: str = "comment",
+        valid_method: str = "union",
+    ) -> None:
         self._c: List[_C] = [c(assert_type) for c in checkers]
         self.additional_props: Dict[str, Any] = {}
         self.valid_info: List[Tuple[str, bool, str]] = []
         self.valid_method: str = valid_method
 
-    def _union(self, val: bool,  checker: _C) -> bool:
+    def _union(self, val: bool, checker: _C) -> bool:
         return val | checker.is_not_valid
 
     def _intersection(self, val: bool, checker: _C) -> bool:
@@ -251,7 +254,7 @@ class CheckerPipelineBase:
             if is_not_valid:
                 error_text.append(txt)
 
-        return error_text
+        return list(set(error_text))
 
     def set_additional_properties(self, **kwargs) -> None:
         self.additional_props.update(**kwargs)
@@ -276,8 +279,9 @@ class CheckerPipelineBase:
 
     # return List of (checker_name, valid, comment)
     def set_valid_info(self, checker: _C) -> None:
-        info: Tuple[str, bool, str] = checker.\
-            get_info("checker_name", "is_not_valid", "comment")
+        info: Tuple[str, bool, str] = checker.get_info(
+            "checker_name", "is_not_valid", "comment"
+        )
         self.valid_info.append(info)
 
 
@@ -290,12 +294,8 @@ class JukugoCheckerPipeline(CheckerPipelineBase):
         self.player_id: int = player_id
         self.adversary_id: int = (player_id + 1) % 2
 
-    def __call__(self,
-                 cpu_state: State,
-                 user_state: State,
-                 *args, **kwargs) -> None:
-        self.set_additional_properties(**{
-            "cpu_state": cpu_state,
-            "user_state": user_state
-        })
+    def __call__(self, cpu_state: State, user_state: State, *args, **kwargs) -> None:
+        self.set_additional_properties(
+            **{"cpu_state": cpu_state, "user_state": user_state}
+        )
         super().__call__(*args, **kwargs)

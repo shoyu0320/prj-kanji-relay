@@ -1,15 +1,16 @@
-from typing import Any, Dict, Optional, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 from account.models import SpecialUser
 from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
+
 # Create your views here.
 from django.views.generic import ListView, TemplateView
 
 from .forms import JukugoForm, LevelChoiceForm
-from .jukugo.main import first, step, write
+from .jukugo.main import first, get_comment, get_unused_jukugo, step, write
 from .jukugo.questions.state import State
 from .models import AbstractGamePlayer, Computer, Play, Player
 
@@ -70,9 +71,11 @@ class GameStartView(TemplateView):
         level: str = form.get_name(selected_level)
         # form経由でなく、modelから直接セーブする方が好き
         start_state: State = first(first="computer", cpu_level=level, jukugo=None)
-        Play.create_game(account=self.account,
-                         cpu_level=level,
-                         start_jukugo=start_state.obs["jukugo"])
+        Play.create_game(
+            account=self.account,
+            cpu_level=level,
+            start_jukugo=start_state.obs["jukugo"],
+        )
 
     def redirect(self) -> HttpResponseRedirect:
         url: str = self.get_success_url()
@@ -99,10 +102,7 @@ class GamePlayView(TemplateView):
     context_object_name: str = "play"
     model: Play = Play
 
-    players: Dict[str, _A] = {
-        "player": Player,
-        "computer": Computer
-    }
+    players: Dict[str, _A] = {"player": Player, "computer": Computer}
 
     @property
     def account(self) -> SpecialUser:
@@ -189,7 +189,7 @@ class GamePlayView(TemplateView):
             context.update(
                 current=self._get_jukugo_form(),
                 last=self._get_last_jukugo(),
-                num_rally=self.num_rally
+                num_rally=self.num_rally,
             )
 
         # 初期値=Noneを回避する
@@ -212,50 +212,65 @@ class GamePlayView(TemplateView):
             return "熟語"
 
 
-class GameWinView(ListView):
+class GameResultView(ListView):
+    class Meta:
+        abstract = True
+
+    @property
+    def account(self) -> SpecialUser:
+        pk: int = self.kwargs["pk"]
+        return SpecialUser.objects.get(pk=pk)
+
+    @property
+    def current_game(self) -> Optional[_A]:
+        account: SpecialUser = self.account
+        games: _QS = account.play.all()
+        return games.last()
+
+    @property
+    def defeat_player(self) -> str:
+        game: Play = self.current_game
+        if game.result == "勝利":
+            return "computer"
+        else:
+            return "player"
+
+    @property
+    def defeat_comment(self) -> List[str]:
+        defeat: str = self.defeat_player
+        cpu_level: str = self.current_game.level
+        return get_comment(defeat, cpu_level)
+
+    @property
+    def available_jukugo(self) -> List[str]:
+        game: Play = self.current_game
+        last_jukugo: str = game.computer.all().last().jukugo
+        if last_jukugo is None:
+            last_jukugo = game.player.all().last().jukugo
+        level: str = game.level
+        return get_unused_jukugo(
+            player="player", cpu_level=level, last_jukugo=last_jukugo
+        )
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context: Dict[str, Any] = super().get_context_data(**kwargs)
+        game: Play = self.current_game
+        context["jukugo_list"] = game.get_jukugo_list()
+        context["available_list"] = self.available_jukugo
+        context["comments"] = self.defeat_comment
+        return context
+
+
+class GameWinView(GameResultView):
     template_name = "game/game_win.html"
     model = Play
     context_object_name = "play"
 
-    @property
-    def account(self) -> SpecialUser:
-        pk: int = self.kwargs["pk"]
-        return SpecialUser.objects.get(pk=pk)
 
-    @property
-    def current_game(self) -> Optional[_A]:
-        account: SpecialUser = self.account
-        games: _QS = account.play.all()
-        return games.last()
-
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
-        context: Dict[str, Any] = super().get_context_data(**kwargs)
-        game: Play = self.current_game
-        context["jukugo_list"] = game.get_jukugo_list()
-        return context
-
-
-class GameLoseView(ListView):
+class GameLoseView(GameResultView):
     template_name = "game/game_lose.html"
     model = Play
     context_object_name = "play"
-
-    @property
-    def account(self) -> SpecialUser:
-        pk: int = self.kwargs["pk"]
-        return SpecialUser.objects.get(pk=pk)
-
-    @property
-    def current_game(self) -> Optional[_A]:
-        account: SpecialUser = self.account
-        games: _QS = account.play.all()
-        return games.last()
-
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
-        context: Dict[str, Any] = super().get_context_data(**kwargs)
-        game: Play = self.current_game
-        context["jukugo_list"] = game.get_jukugo_list()
-        return context
 
 
 class GameDetailView(ListView):
@@ -283,7 +298,7 @@ class GameDetailView(ListView):
         context: Dict[str, Any] = super().get_context_data(**kwargs)
         all_games: Play = self.all_games
         context["game_list"] = [
-            (game.pk, game.num_rally, game.level, game.get_jukugo_list())
+            (game.pk, game.result, game.num_rally, game.level, game.get_jukugo_list())
             for game in all_games
         ]
         return context

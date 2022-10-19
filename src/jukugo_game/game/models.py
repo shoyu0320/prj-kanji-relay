@@ -13,25 +13,27 @@ _QS = TypeVar("_QS", bound=QuerySet)
 
 class Play(models.Model):
     """試合に関する情報を載せていくDB
-        試合ごとに熟語のリレー情報や勝ち負けを入れていく
+    試合ごとに熟語のリレー情報や勝ち負けを入れていく
     """
+
     update_list: List[str] = [
-        "answerer", "jukugo", "jukugo_id", "yomi", "num_rally", "is_done"
+        "answerer",
+        "jukugo",
+        "jukugo_id",
+        "yomi",
+        "num_rally",
+        "is_done",
     ]
     # TODO: Add both 'jukugo_id' and yomi in a displaying key as well.
-    key_list: List[str] = [
-        "jukugo", "is_done"
-    ]
-    change_dict: Dict[str, Any] = {
-        "is_done": lambda d: "x" if d else "o"
-    }
+    key_list: List[str] = ["jukugo", "is_done"]
+    change_dict: Dict[str, Any] = {"is_done": lambda d: "x" if d else "o"}
 
     @classmethod
     def create_game(
         cls,
         account: SpecialUser,
         cpu_level: str = "normal",
-        start_jukugo: Optional[str] = None
+        start_jukugo: Optional[str] = None,
     ) -> _P:
         game: _P = cls(account=account, level=cpu_level, jukugo=start_jukugo)
         game.save(force_insert=True)
@@ -42,23 +44,20 @@ class Play(models.Model):
         return game
 
     account = models.ForeignKey(
-        SpecialUser, on_delete=models.CASCADE, related_name='play')
+        SpecialUser, on_delete=models.CASCADE, related_name="play"
+    )
     game_id: _F = models.UUIDField(
         primary_key=False, default=uuid.uuid4, editable=False
     )
     # 相手の難易度もついでに書いとく
-    level: _F = models.CharField(
-        verbose_name="難易度", default="normal", max_length=10
-    )
+    level: _F = models.CharField(verbose_name="難易度", default="normal", max_length=10)
     # 相手:False/自分:True(複数対戦を許可しない)
     answerer: _F = models.BooleanField(verbose_name="解答者", default=False)
     # (相手)->(自分)->(相手)->...
     jukugo: _F = models.CharField(
         verbose_name="リレーした熟語", null=True, default=None, max_length=10
     )
-    jukugo_id: _F = models.IntegerField(
-        verbose_name="熟語ID", default=None, null=True
-    )
+    jukugo_id: _F = models.IntegerField(verbose_name="熟語ID", default=None, null=True)
     yomi: _F = models.CharField(
         verbose_name="読み", default=None, null=True, max_length=20
     )
@@ -68,6 +67,13 @@ class Play(models.Model):
 
     class Meta:
         db_table: str = "play"
+
+    @property
+    def result(self) -> str:
+        if (not self.answerer) and (self.is_done):
+            return "勝利"
+        else:
+            return "敗北"
 
     def get_is_done_from_player(self, **kwargs) -> None:
         player_set: _QS
@@ -88,6 +94,8 @@ class Play(models.Model):
 
     def increment(self, **kwargs) -> None:
         for k, v in kwargs.items():
+            if v is None:
+                continue
             setattr(self, k, v)
 
         self.is_done = self.get_is_done_from_player(**kwargs)
@@ -101,8 +109,7 @@ class Play(models.Model):
         key_id_list: List[int] = [self.key_list.index(k) for k in key_list]
         return zip(key_id_list, key_list)
 
-    def process_val(self,
-                    val: Tuple[Any, ...]) -> Tuple[Any, ...]:
+    def process_val(self, val: Tuple[Any, ...]) -> Tuple[Any, ...]:
         # zipはgeneratorなので使うごとに生成する必要がある
         key_zip: zip = self.get_key_zip()
         key_id: int
@@ -122,10 +129,8 @@ class Play(models.Model):
 
     def get_values_from_attr(self, attr: str) -> List[Tuple[Any, ...]]:
         value_set: _QS = getattr(self, attr).all()
-        full_values: _QS[Tuple[Any, ...]] =\
-            value_set.values_list(*self.key_list)
-        processed_values: List[Tuple[Any, ...]] =\
-            self.make_val_visualize(full_values)
+        full_values: _QS[Tuple[Any, ...]] = value_set.values_list(*self.key_list)
+        processed_values: List[Tuple[Any, ...]] = self.make_val_visualize(full_values)
         return [(attr, *info) for info in processed_values]
 
     def get_jukugo_list_by_players(self) -> List[str]:
@@ -140,19 +145,19 @@ class Play(models.Model):
         else:
             return "computer"
 
-    def get_last_IDs(self,
-                     word_dict: Dict[str, List[Any]],
-                     method: Callable[..., int]
-                     ) -> Tuple[int, int]:
+    def get_last_IDs(
+        self, word_dict: Dict[str, List[Any]], method: Callable[..., int]
+    ) -> Tuple[int, int]:
         return method([len(v) for v in word_dict.values()])
 
-    def push_word_recursively(self,
-                              jukugo_dict: Dict[str, List[Tuple[Any, ...]]],
-                              max_id: int,
-                              first: str = "computer",
-                              count: int = 0,
-                              word_list: List[Tuple[Any, ...]] = []
-                              ):
+    def push_word_recursively(
+        self,
+        jukugo_dict: Dict[str, List[Tuple[Any, ...]]],
+        max_id: int,
+        first: str = "computer",
+        count: int = 0,
+        word_list: List[Tuple[Any, ...]] = [],
+    ):
         if count == max_id:
             word_list += [jukugo_dict[self.switch_player(first)][count]]
             return word_list
@@ -162,19 +167,19 @@ class Play(models.Model):
         else:
             word_list += [
                 jukugo_dict[self.switch_player(first)][count],
-                jukugo_dict[first][count]
+                jukugo_dict[first][count],
             ]
-        return self.push_word_recursively(jukugo_dict=jukugo_dict,
-                                          max_id=max_id,
-                                          first=first,
-                                          count=count + 1,
-                                          word_list=word_list
-                                          )
+        return self.push_word_recursively(
+            jukugo_dict=jukugo_dict,
+            max_id=max_id,
+            first=first,
+            count=count + 1,
+            word_list=word_list,
+        )
 
-    def get_jukugo_list(self,
-                        first: str = "computer",
-                        reverse: bool = False
-                        ) -> List[Tuple[Any, ...]]:
+    def get_jukugo_list(
+        self, first: str = "computer", reverse: bool = False
+    ) -> List[Tuple[Any, ...]]:
         jukugo_dict: Dict[str, List[Tuple[Any, ...]]]
         jukugo_dict = self.get_jukugo_list_by_players()
 
@@ -184,7 +189,7 @@ class Play(models.Model):
             jukugo_dict=jukugo_dict,
             max_id=self.get_last_IDs(jukugo_dict, max) - 1,
             first=first,
-            word_list=[]
+            word_list=[],
         )
 
         if reverse:
@@ -198,9 +203,7 @@ class AbstractGamePlayer(models.Model):
     jukugo: _F = models.CharField(
         verbose_name="熟語", default=None, null=True, max_length=10
     )
-    jukugo_id: _F = models.IntegerField(
-        verbose_name="熟語ID", default=None, null=True
-    )
+    jukugo_id: _F = models.IntegerField(verbose_name="熟語ID", default=None, null=True)
     yomi: _F = models.CharField(
         verbose_name="読み", default=None, null=True, max_length=20
     )
@@ -220,15 +223,11 @@ class AbstractGamePlayer(models.Model):
 
 class Computer(AbstractGamePlayer):
     game: _F = models.ForeignKey(
-        Play, verbose_name="ゲーム", on_delete=models.CASCADE, related_name='computer'
+        Play, verbose_name="ゲーム", on_delete=models.CASCADE, related_name="computer"
     )
     # 相手の難易度もついでに書いとく
-    level: _F = models.CharField(
-        verbose_name="難易度", default="normal", max_length=10
-    )
-    cpu_id: _F = models.UUIDField(
-        primary_key=False, default=uuid.uuid4, editable=False
-    )
+    level: _F = models.CharField(verbose_name="難易度", default="normal", max_length=10)
+    cpu_id: _F = models.UUIDField(primary_key=False, default=uuid.uuid4, editable=False)
 
     class Meta:
         db_table: str = "computer"
@@ -236,7 +235,7 @@ class Computer(AbstractGamePlayer):
 
 class Player(AbstractGamePlayer):
     game: _F = models.ForeignKey(
-        Play, verbose_name="ゲーム", on_delete=models.CASCADE, related_name='player'
+        Play, verbose_name="ゲーム", on_delete=models.CASCADE, related_name="player"
     )
     user_id: _F = models.UUIDField(
         primary_key=False, default=uuid.uuid4, editable=False

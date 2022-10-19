@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import Dict, FrozenSet, List, Optional, TypeVar, Union
 
@@ -6,17 +7,14 @@ _L = TypeVar("_L", bound=Union[int, str])
 
 class VariablesBox:
     def __init__(
-        self,
-        variables: List[_L],
-        box_id: _L = 0,
-        name: Optional[str] = None
+        self, variables: List[_L], box_id: _L = 0, name: Optional[str] = None
     ) -> None:
         self.variables: List[_L] = variables
         self.box_id: _L = box_id
         self.used_ids: List[int] = []
         self.max_ids: int = len(variables)
         self.name: str = name
-        self.players: Dict[str, List[int]] = {name: self.variables}
+        self.players: Dict[str, List[int]] = {name: self.full_set}
         self.initial_prohibited_words: List[int] = []
 
     def __setitem__(self, key: str, val: List[int]) -> None:
@@ -27,21 +25,24 @@ class VariablesBox:
             return self.full_set
         return set(self.players[key])
 
-    def get_named_unused_set(self, key: str) -> List[int]:
+    def get_named_unused_set(self, key: Optional[str] = None) -> List[int]:
         used_ids: FrozenSet[int] = set(self.used_ids)
         return list(self[key] - used_ids)
 
-    def get_named_unused_vars(self, key: str) -> List[str]:
+    def get_named_unused_vars(self, key: Optional[str] = None) -> List[str]:
         output: List[_L] = []
         us: int
-        available_set: List[str] = self.get_named_unused_set(key)
+        available_set: List[int] = self.get_named_unused_set(key)
         for us in available_set:
             output += [self.variables[us]]
         return output
 
+    def include(self, val: _L, key: Optional[str] = None) -> bool:
+        return val in self.get_named_unused_vars(key)
+
     # TODO プレイヤーごとのフルセットを作成する
     def reset(self):
-        self.used_ids = self.initial_prohibited_words
+        self.used_ids = copy.deepcopy(self.initial_prohibited_words)
 
     @property
     def full_set(self) -> FrozenSet[int]:
@@ -79,6 +80,9 @@ class VariablesBox:
     def add2used(self, used_id: int) -> None:
         self.used_ids.append(used_id)
 
+    def remove_from_used(self, used_id: int) -> None:
+        self.used_ids.remove(used_id)
+
     def push(self, val: _L) -> None:
         self.variables += [val]
         self.max_ids += 1
@@ -98,9 +102,14 @@ class VariablesBox:
             output += self.pull()
         return output
 
-    def increase(self, val: Optional[_L]) -> None:
+    def is_in_initial_list(self, _id: int) -> bool:
+        return _id in self.initial_prohibited_words
+
+    def increase(self, val: Optional[_L], replace=True) -> None:
         if val in self.variables:
             _id: int = self.variables.index(val)
+            if (replace) and (self.is_in_initial_list(_id)):
+                self.remove_from_used(_id)
             self.add2used(_id)
 
     def increase_seq(self, vals: List[_L]) -> None:
