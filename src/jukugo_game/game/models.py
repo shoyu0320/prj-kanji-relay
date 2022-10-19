@@ -69,6 +69,17 @@ class Play(models.Model):
     class Meta:
         db_table: str = "play"
 
+    @property
+    def current_answerer_is_player(self) -> bool:
+        return not self.game.answerer
+
+    @property
+    def result(self) -> str:
+        if self.current_answerer_is_player:
+            return "勝利"
+        else:
+            return "敗北"
+
     def get_is_done_from_player(self, **kwargs) -> None:
         player_set: _QS
         player: _A

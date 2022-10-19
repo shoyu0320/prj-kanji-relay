@@ -283,7 +283,7 @@ class GameDetailView(ListView):
         context: Dict[str, Any] = super().get_context_data(**kwargs)
         all_games: Play = self.all_games
         context["game_list"] = [
-            (game.pk, game.num_rally, game.level, game.get_jukugo_list())
+            (game.pk, game.result, game.num_rally, game.level, game.get_jukugo_list())
             for game in all_games
         ]
         return context
