@@ -44,11 +44,13 @@ def get_players(cpu_level: str = "normal") -> Dict[str, _A]:
         A dictionary with two keys, "master" and "computer",
         and two values, MASTER and DIFFICULTIES[cpu_level].
     """
-    return {
-        "master": MASTER,
-        "player": PLAYER,
-        "computer": DIFFICULTIES[cpu_level]
-    }
+def get_unused_jukugo(
+    player: str = "computer",
+    cpu_level: str = "normal",
+    last_jukugo: Optional[str] = None,
+) -> List[str]:
+    player: _A = get_players(cpu_level)[player]
+    return player.env._get_available_jukugo(last_jukugo)
 
 
 def reset_dict(cpu_level: str = "normal", jukugo: Optional[str] = None) -> None:
