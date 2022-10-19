@@ -1,83 +1,54 @@
 import uuid
-from typing import Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
+from account.models import SpecialUser
 from django.db import models
+from django.db.models import QuerySet
 
-_M = TypeVar("_M", bound=models.Model)
 _F = TypeVar("_F", bound=models.Field)
 _P = TypeVar("_P", bound="Play")
 _A = TypeVar("_A", bound="AbstractGamePlayer")
-
-
-# makemigrations, migrate はいらないものが入らないように、migrations内を消しつつ進めること
-# こいつがデータベースの中身を決める
-class AbstractGamePlayer(models.Model):
-    jukugo: _F = models.CharField(
-        verbose_name="熟語", default=None, null=True, max_length=10
-    )
-    jukugo_id: _F = models.IntegerField(
-        verbose_name="熟語ID", default=None, null=True
-    )
-    yomi: _F = models.CharField(
-        verbose_name="読み", default=None, null=True, max_length=20
-    )
-    # 継続状態:False/負け状態:True(次の熟語が出てこない;None)/その他:Null
-    is_done: _F = models.BooleanField(verbose_name="勝ち負け", null=True, max_length=10)
-
-    class Meta:
-        abstract = True
-
-    @classmethod
-    def create_player(cls, *args, **kwargs) -> _A:
-        player: _A = cls(*args, **kwargs)
-        player.save()
-
-
-class Computer(AbstractGamePlayer):
-    # 相手の難易度もついでに書いとく
-    level: _F = models.CharField(
-        verbose_name="難易度", default="normal", null=True, max_length=10
-    )
-
-    class Meta:
-        db_table: str = "play_cpu"
-
-
-class Player(AbstractGamePlayer):
-
-    class Meta:
-        db_table = "play_user"
+_QS = TypeVar("_QS", bound=QuerySet)
 
 
 class Play(models.Model):
     """試合に関する情報を載せていくDB
         試合ごとに熟語のリレー情報や勝ち負けを入れていく
     """
+    update_list: List[str] = [
+        "answerer", "jukugo", "jukugo_id", "yomi", "num_rally", "is_done"
+    ]
+    # TODO: Add both 'jukugo_id' and yomi in a displaying key as well.
+    key_list: List[str] = [
+        "jukugo", "is_done"
+    ]
+    change_dict: Dict[str, Any] = {
+        "is_done": lambda d: "x" if d else "o"
+    }
+
     @classmethod
     def create_game(
         cls,
+        account: SpecialUser,
         cpu_level: str = "normal",
         start_jukugo: Optional[str] = None
     ) -> _P:
-        player: _A = Player()
-        computer: _A = Computer(jukugo=start_jukugo, level=cpu_level)
-        game: _P = cls(cpu=computer, user=player, jukugo=start_jukugo)
-        _: _M
-        for _ in [player, computer, game]:
-            _.save()
+        game: _P = cls(account=account, level=cpu_level, jukugo=start_jukugo)
+        game.save(force_insert=True)
+        player: _A = Player(game=game)
+        player.save(force_insert=True)
+        computer: _A = Computer(game=game, level=cpu_level, jukugo=start_jukugo)
+        computer.save(force_insert=True)
         return game
 
+    account = models.ForeignKey(
+        SpecialUser, on_delete=models.CASCADE, related_name='play')
     game_id: _F = models.UUIDField(
         primary_key=False, default=uuid.uuid4, editable=False
     )
-
-    # CPU の解答情報
-    cpu: _F = models.OneToOneField(
-        Computer, on_delete=models.CASCADE, verbose_name="CPU", related_name="cpu",
-    )
-    # プレイヤーの解答情報
-    user: _F = models.OneToOneField(
-        Player, on_delete=models.CASCADE, verbose_name="プレイヤー", related_name="user",
+    # 相手の難易度もついでに書いとく
+    level: _F = models.CharField(
+        verbose_name="難易度", default="normal", max_length=10
     )
     # 相手:False/自分:True(複数対戦を許可しない)
     answerer: _F = models.BooleanField(verbose_name="解答者", default=False)
@@ -111,4 +82,56 @@ class Play(models.Model):
         self.is_done = self.get_is_done_from_player(**kwargs)
         self.num_rally += 1
         self.answerer = not self.answerer
-        self.save()
+
+# makemigrations, migrate はいらないものが入らないように、migrations内を消しつつ進めること
+# こいつがデータベースの中身を決める
+class AbstractGamePlayer(models.Model):
+    jukugo: _F = models.CharField(
+        verbose_name="熟語", default=None, null=True, max_length=10
+    )
+    jukugo_id: _F = models.IntegerField(
+        verbose_name="熟語ID", default=None, null=True
+    )
+    yomi: _F = models.CharField(
+        verbose_name="読み", default=None, null=True, max_length=20
+    )
+    # 継続状態:False/負け状態:True(次の熟語が出てこない;None)/その他:Null
+    is_done: _F = models.BooleanField(
+        verbose_name="勝ち負け", default=False, null=True, max_length=10
+    )
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def create_player(cls, *args, **kwargs) -> _A:
+        player: _A = cls(*args, **kwargs)
+        player.save()
+
+
+class Computer(AbstractGamePlayer):
+    game: _F = models.ForeignKey(
+        Play, verbose_name="ゲーム", on_delete=models.CASCADE, related_name='computer'
+    )
+    # 相手の難易度もついでに書いとく
+    level: _F = models.CharField(
+        verbose_name="難易度", default="normal", max_length=10
+    )
+    cpu_id: _F = models.UUIDField(
+        primary_key=False, default=uuid.uuid4, editable=False
+    )
+
+    class Meta:
+        db_table: str = "computer"
+
+
+class Player(AbstractGamePlayer):
+    game: _F = models.ForeignKey(
+        Play, verbose_name="ゲーム", on_delete=models.CASCADE, related_name='player'
+    )
+    user_id: _F = models.UUIDField(
+        primary_key=False, default=uuid.uuid4, editable=False
+    )
+
+    class Meta:
+        db_table = "player"

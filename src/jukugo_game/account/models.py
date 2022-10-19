@@ -1,8 +1,11 @@
 import uuid
+from typing import Dict, TypeVar
 
 from django.contrib.auth.models import User
 from django.db import models
-from game.models import Computer, Play, Player
+
+_T = TypeVar("_T", bound=models.Model)
+_QS = TypeVar("_QS", bound=models.QuerySet)
 
 
 class SpecialUser(User):
@@ -16,19 +19,29 @@ class SpecialUser(User):
     num_play: models.Field = models.PositiveBigIntegerField(
         default=0, verbose_name="試合数"
     )
-    play: models.Field = models.ManyToManyField(Play)
 
     class Meta:
         db_table: str = "account"
 
-    def increment(self, play: Play) -> None:
-        cpu: Computer = play.cpu
-        player: Player = play.user
+    @property
+    def current_game(self) -> _T:
+        game: _QS = self.play.all()
+        return game.last()
 
-        if cpu.is_done:
+    def increment(self) -> None:
+        game: _T = self.current_game
+        player_set: _QS
+        player: _T
+        is_done_dict: Dict[str, bool] = {}
+        for name in ["player", "computer"]:
+            player_set = getattr(game, name).all()
+            player: _T = player_set.last()
+            is_done_dict[name] = player.is_done
+
+        if is_done_dict["computer"]:
             self.num_lose += 1
-        elif player.is_done:
+        elif is_done_dict["player"]:
             self.num_win += 1
         self.num_play += 1
 
-        self.save()
+        self.save(force_update=True)
