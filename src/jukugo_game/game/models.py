@@ -96,6 +96,102 @@ class Play(models.Model):
         update_args: Dict[str, Any] = self.__get_update_dict()
         Play.objects.filter(game_id=self.game_id).update(**update_args)
 
+    def get_key_zip(self) -> zip:
+        key_list: List[str] = list(self.change_dict.keys())
+        key_id_list: List[int] = [self.key_list.index(k) for k in key_list]
+        return zip(key_id_list, key_list)
+
+    def process_val(self,
+                    val: Tuple[Any, ...]) -> Tuple[Any, ...]:
+        # zipはgeneratorなので使うごとに生成する必要がある
+        key_zip: zip = self.get_key_zip()
+        key_id: int
+        key_name: str
+        list_v: List[Any] = list(val)
+        for key_id, key_name in key_zip:
+            list_v[key_id] = self.change_dict[key_name](list_v[key_id])
+        return tuple(list_v)
+
+    def make_val_visualize(self, val_qs: _QS) -> List[Tuple[Any, ...]]:
+        v: Tuple[Any, ...]
+        output: List[Tuple[Any, ...]] = []
+        for v in val_qs:
+            v = self.process_val(v)
+            output.append(v)
+        return output
+
+    def get_values_from_attr(self, attr: str) -> List[Tuple[Any, ...]]:
+        value_set: _QS = getattr(self, attr).all()
+        full_values: _QS[Tuple[Any, ...]] =\
+            value_set.values_list(*self.key_list)
+        processed_values: List[Tuple[Any, ...]] =\
+            self.make_val_visualize(full_values)
+        return [(attr, *info) for info in processed_values]
+
+    def get_jukugo_list_by_players(self) -> List[str]:
+        jukugo_list: Dict[str, List[str]] = {}
+        for name in ["player", "computer"]:
+            jukugo_list[name] = self.get_values_from_attr(name)
+        return jukugo_list
+
+    def switch_player(self, player: str = "computer") -> str:
+        if player == "computer":
+            return "player"
+        else:
+            return "computer"
+
+    def get_last_IDs(self,
+                     word_dict: Dict[str, List[Any]],
+                     method: Callable[..., int]
+                     ) -> Tuple[int, int]:
+        return method([len(v) for v in word_dict.values()])
+
+    def push_word_recursively(self,
+                              jukugo_dict: Dict[str, List[Tuple[Any, ...]]],
+                              max_id: int,
+                              first: str = "computer",
+                              count: int = 0,
+                              word_list: List[Tuple[Any, ...]] = []
+                              ):
+        if count == max_id:
+            word_list += [jukugo_dict[self.switch_player(first)][count]]
+            return word_list
+
+        if count == 0:
+            word_list += [jukugo_dict[first][count]]
+        else:
+            word_list += [
+                jukugo_dict[self.switch_player(first)][count],
+                jukugo_dict[first][count]
+            ]
+        return self.push_word_recursively(jukugo_dict=jukugo_dict,
+                                          max_id=max_id,
+                                          first=first,
+                                          count=count + 1,
+                                          word_list=word_list
+                                          )
+
+    def get_jukugo_list(self,
+                        first: str = "computer",
+                        reverse: bool = False
+                        ) -> List[Tuple[Any, ...]]:
+        jukugo_dict: Dict[str, List[Tuple[Any, ...]]]
+        jukugo_dict = self.get_jukugo_list_by_players()
+
+        # Not specifying 'word_list',
+        # the case that a same tables is concatenated below on html may happen.
+        jukugo_list: List[Tuple[Any, ...]] = self.push_word_recursively(
+            jukugo_dict=jukugo_dict,
+            max_id=self.get_last_IDs(jukugo_dict, max) - 1,
+            first=first,
+            word_list=[]
+        )
+
+        if reverse:
+            jukugo_list.reverse()
+        return jukugo_list
+
+
 # makemigrations, migrate はいらないものが入らないように、migrations内を消しつつ進めること
 # こいつがデータベースの中身を決める
 class AbstractGamePlayer(models.Model):
