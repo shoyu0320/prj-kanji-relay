@@ -79,6 +79,13 @@ class Play(models.Model):
             is_done |= player.is_done
         return is_done
 
+    def __get_update_dict(self) -> Dict[str, Any]:
+        kwargs: Dict[str, Any] = self.__dict__
+        update_dict: Dict[str, Any] = {}
+        for key in self.update_list:
+            update_dict[key] = kwargs.get(key, None)
+        return update_dict
+
     def increment(self, **kwargs) -> None:
         for k, v in kwargs.items():
             setattr(self, k, v)
