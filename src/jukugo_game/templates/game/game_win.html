@@ -38,6 +38,12 @@
             </tbody>
         </table>
     </h3>
+    <h3>
+        他の熟語参考:<br>
+        {% for jukugo in available_list %}
+        {{ jukugo }},&nbsp;
+        {% endfor %}
+    </h3>
     <h2>
         <a href="{% url 'game:start' pk=user.pk %}">もう一回やる</a><br>
         <a href="{% url 'account:user' pk=user.pk %}">マイページ</a><br>
